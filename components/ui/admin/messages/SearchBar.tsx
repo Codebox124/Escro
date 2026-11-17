@@ -1,8 +1,8 @@
 "use client"
 import React, { useState } from 'react'
-import { CiSearch } from 'react-icons/ci'
-import { LuUserRoundSearch } from "react-icons/lu";
-import { IoPersonOutline } from 'react-icons/io5';
+import { CiSearch } from '@/components/icons'
+import { LuUserRoundSearch } from "@/components/icons";
+import { IoPersonOutline } from '@/components/icons';
 import { useAdminContext } from '../AdminContext';
 
 function SearchBar({setConversation, setSelectedSomeone}:any) {
@@ -24,7 +24,7 @@ function SearchBar({setConversation, setSelectedSomeone}:any) {
         setSearchResults(newResultsGottenFromConversations)
         return
       }
-      
+
 
       setSearchResults(newResults)
     }else{
@@ -33,10 +33,10 @@ function SearchBar({setConversation, setSelectedSomeone}:any) {
   }
 
   return (
-    <div className='full relative flex flex-col'>
-      <div className='w-full cursor-pointer bg-white gap-2 px-6 shadow-lg flex items-center justify-between rounded-lg'>
-        <label htmlFor="search"><CiSearch /></label>
-        <input placeholder='Search by name or username...' onChange={e=>{handleSearch(e.target.value)}} id='search' type="text" className='border-none outline-none w-full h-[60px]'  />
+    <div className='relative flex w-full flex-col'>
+      <div className='flex h-11 w-full items-center gap-2 rounded-full bg-white px-4 text-black/40 ring-1 ring-black/10 transition focus-within:ring-2 focus-within:ring-ink'>
+        <label htmlFor="search"><CiSearch className='text-lg' /></label>
+        <input placeholder='Search by name or username...' onChange={e=>{handleSearch(e.target.value)}} id='search' type="text" className='h-full w-full min-w-0 border-none bg-transparent text-sm text-ink outline-none placeholder:text-black/40'  />
         <label htmlFor="search"><LuUserRoundSearch /></label>
     </div>
     {isSearching && <SearchResults setConversation={setConversation} setSelectedSomeone={setSelectedSomeone} results={searchResults} />}
@@ -48,7 +48,7 @@ export default SearchBar
 
 
 
-function SearchResults({results, setConversation, setSelectedSomeone}:any) {  
+function SearchResults({results, setConversation, setSelectedSomeone}:any) {
   const {setIsSearching, conversations} = useAdminContext()
   function handleSelectConversation(item:any){
     const existingConversation = conversations.find((conv:any)=>conv.id===item.id) //checks if an existing conversation exists
@@ -59,23 +59,23 @@ function SearchResults({results, setConversation, setSelectedSomeone}:any) {
     }
 }
 
-  return <div className='z-10 absolute top-16 bg-white p-6 shadow-lg w-full h-[200px] flex flex-col gap-2 overflow-y-auto'>
+  return <div className='absolute top-14 z-20 flex max-h-72 w-full flex-col gap-1 overflow-y-auto rounded-3xl bg-white p-2 shadow-[0_30px_60px_-20px_rgba(12,17,14,0.35)] ring-1 ring-black/5'>
     {results.length!=0 ? results.map((item:any, index:any)=>{
-      return <div onClick={()=>{setSelectedSomeone(true); handleSelectConversation(item); setIsSearching(false)}} key={item.id} className='flex cursor-pointer rounded-lg gap-4 items-center bg-gray-500/15 p-3'>
+      return <div onClick={()=>{setSelectedSomeone(true); handleSelectConversation(item); setIsSearching(false)}} key={item.id} className='flex cursor-pointer items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-cream/60'>
         {
-          item.pfp ? <img className='w-[40px] h-[40px] rounded-full' src={item.pfp} alt={item.name} />:
-          <span className='w-[40px] h-[40px] rounded-full bg-gray-300 flex items-center justify-center' > 
+          item.pfp ? <img className='h-10 w-10 shrink-0 rounded-full object-cover' src={item.pfp} alt={item.name} />:
+          <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink font-bold text-lime' >
           <IoPersonOutline />
           </span>
         }
-        <div className='flex flex-col'>
-          <span className='font-semibold'>{item.name}</span>
-          <span className='text-[#6B7280]'>{!item.type?`@${item.userName}`:"Group"}</span> 
+        <div className='flex min-w-0 flex-col'>
+          <span className='truncate text-sm font-semibold text-ink'>{item.name}</span>
+          <span className='truncate text-xs text-black/55'>{!item.type?`@${item.userName}`:"Group"}</span>
         </div>
-        <button className='ml-auto text-emerald-700 bg-emerald-700/20 p-2 rounded-lg font-bold cursor-pointer'>Message</button>
+        <button className='ml-auto shrink-0 cursor-pointer rounded-full bg-ink px-3.5 py-2 text-xs font-bold text-lime transition-colors hover:bg-ink-soft'>Message</button>
       </div>
     }):
-    <div className='flex flex-col text-center w-full h-full items-center justify-center'>
+    <div className='flex w-full flex-col items-center justify-center py-8 text-center text-sm text-black/55'>
       <p>No results found</p>
     </div>}
   </div>

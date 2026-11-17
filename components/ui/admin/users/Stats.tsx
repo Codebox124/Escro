@@ -1,109 +1,47 @@
 "use client"
-import React, { useEffect, useState } from 'react'
-import { IoCheckmarkDone } from "react-icons/io5"
-import { useAdminContext } from '../AdminContext';
-import { LuClock2 } from 'react-icons/lu';
-import { TbCancel } from 'react-icons/tb';
-import { Ban, HatGlasses, Motorbike, Store, Users } from 'lucide-react';
+import React from 'react'
+import { Users } from '@/components/icons'
+import { ROLES, ROLE_META, UserCounts, UserRoleFilter } from './types'
 
-function Stats() {
-    const [stats, setStats] = useState({
-        customers:0,
-        agencies:0,
-        couriers:0,
-        stores:0,
-        banned:0
-    })
-    const {users} = useAdminContext();
+interface StatsProps {
+  counts?: UserCounts | null
+  loading?: boolean
+  /** Highlights the tile that matches the active role filter */
+  activeRole?: UserRoleFilter
+  onSelectRole?: (role: UserRoleFilter) => void
+}
 
-    useEffect(()=>{
-        const customers = users.filter((user:any)=> user.role==="Customer").length
-        const agencies = users.filter((user:any)=> user.role==="Agency").length
-        const couriers = users.filter((user:any)=> user.role==="Courier").length
-        const stores = users.filter((user:any)=> user.role==="Store").length
-        const banned = users.filter((user:any)=> user.status==="Banned").length
-      //  const unverifiedusers = users.filter((user:any)=> user.role==="Unverified").length
-        setStats({
-            customers,
-            agencies,
-            couriers,
-            stores,
-            banned
-        })
-    }, [users])
+function Stats({ counts, loading = false, activeRole = "all", onSelectRole }: StatsProps) {
+  const total = ROLES.reduce((sum, r) => sum + (counts?.[r] ?? 0), 0)
+  const tiles: { key: UserRoleFilter; label: string; value: number; icon: React.ElementType }[] = [
+    { key: "all", label: "Total users", value: total, icon: Users },
+    ...ROLES.map((r) => ({ key: r as UserRoleFilter, label: ROLE_META[r].plural, value: counts?.[r] ?? 0, icon: ROLE_META[r].icon })),
+  ]
+
   return (
-    <div className="flex flex-wrap gap-3">
-        <div
-          className={`flex-1 bg-emerald-500/10 border-emerald-500/20 border px-4 py-2.5 rounded-sm flex items-center gap-2.5 transition-all hover:shadow-sm`}
-        >
-          <Users size={16} className="text-emerald-700" />
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium text-emerald-500`}>
-              Customers:
-            </span>
-            <span className={`text-lg font-bold text-emerald-500`}>
-              {stats.customers}
-            </span>
-          </div>
-        </div>
-
-        <div
-          className={`flex-1 bg-emerald-500/10 border-emerald-500/20 border px-4 py-2.5 rounded-sm flex items-center gap-2.5 transition-all hover:shadow-sm`}
-        >
-          <Store size={16} className="text-emerald-700" />
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium text-emerald-500`}>
-              Stores:
-            </span>
-            <span className={`text-lg font-bold text-emerald-500`}>
-              {stats.stores}
-            </span>
-          </div>
-        </div>
-
-        <div
-          className={`flex-1 bg-emerald-500/10 border-emerald-500/20 border px-4 py-2.5 rounded-sm flex items-center gap-2.5 transition-all hover:shadow-sm`}
-        >
-          <HatGlasses size={16} className="text-emerald-700" />
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium text-emerald-500`}>
-              Agencies:
-            </span>
-            <span className={`text-lg font-bold text-emerald-500`}>
-              {stats.agencies}
-            </span>
-          </div>
-        </div>
-
-        <div
-          className={`flex-1 bg-emerald-500/10 border-emerald-500/20 border px-4 py-2.5 rounded-sm flex items-center gap-2.5 transition-all hover:shadow-sm`}
-        >
-          <Motorbike size={16} className="text-emerald-700" />
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium text-emerald-500`}>
-              Couriers:
-            </span>
-            <span className={`text-lg font-bold text-emerald-500`}>
-              {stats.couriers}
-            </span>
-          </div>
-        </div>
-
-        <div
-          className={`flex-1 bg-red-500/10 border-red-500/20 border px-4 py-2.5 rounded-sm flex items-center gap-2.5 transition-all hover:shadow-sm`}
-        >
-          <Ban size={16} className='text-red-500' />
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium text-red-500`}>
-              Banned:
-            </span>
-            <span className={`text-lg font-bold text-red-500`}>
-              {stats.banned}
-            </span>
-          </div>
-        </div>
-
-        
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6">
+      {tiles.map(({ key, label, value, icon: Icon }) => {
+        const active = activeRole === key
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onSelectRole?.(key)}
+            aria-pressed={active}
+            className={`flex min-w-0 cursor-pointer items-center gap-3 p-4 text-left transition-shadow ${active ? "rounded-3xl bg-ink text-white" : "surface-card card-hover"}`}
+          >
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${active ? "bg-white/10 text-lime" : "bg-cream text-ink"}`}><Icon size={16} className="h-4 w-4" /></span>
+            <div className="min-w-0">
+              <p className={`truncate font-space text-[11px] uppercase tracking-widest ${active ? "text-white/60" : "text-black/45"}`}>{label}</p>
+              {loading && !counts ? (
+                <span className="mt-1 block h-7 w-12 animate-pulse rounded-lg bg-black/10" />
+              ) : (
+                <p className={`font-space text-2xl font-bold tracking-tight ${active ? "text-white" : "text-ink"}`}>{value.toLocaleString("en-NG")}</p>
+              )}
+            </div>
+          </button>
+        )
+      })}
     </div>
   )
 }

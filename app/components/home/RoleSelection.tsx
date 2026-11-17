@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { motion } from "motion/react";
 import {
   ShoppingBag,
   Store,
@@ -12,7 +13,38 @@ import {
   Users,
   Zap,
   CheckCircle2,
-} from "lucide-react";
+} from "@/components/icons";
+
+const accentStyles = {
+  emerald: {
+    icon: "bg-emerald-50 text-emerald-600 ring-emerald-100",
+    badge: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    check: "text-emerald-500",
+    stat: "bg-emerald-50 text-emerald-600",
+    hover: "hover:border-emerald-300 hover:shadow-emerald-500/10",
+  },
+  amber: {
+    icon: "bg-amber-50 text-amber-600 ring-amber-100",
+    badge: "bg-amber-50 text-amber-700 ring-amber-200",
+    check: "text-amber-500",
+    stat: "bg-amber-50 text-amber-600",
+    hover: "hover:border-amber-300 hover:shadow-amber-500/10",
+  },
+  blue: {
+    icon: "bg-sky-50 text-sky-600 ring-sky-100",
+    badge: "bg-sky-50 text-sky-700 ring-sky-200",
+    check: "text-sky-500",
+    stat: "bg-sky-50 text-sky-600",
+    hover: "hover:border-sky-300 hover:shadow-sky-500/10",
+  },
+  violet: {
+    icon: "bg-violet-50 text-violet-600 ring-violet-100",
+    badge: "bg-violet-50 text-violet-700 ring-violet-200",
+    check: "text-violet-500",
+    stat: "bg-violet-50 text-violet-600",
+    hover: "hover:border-violet-300 hover:shadow-violet-500/10",
+  },
+} as const;
 
 const RoleSelection = () => {
   const roles = [
@@ -32,16 +64,8 @@ const RoleSelection = () => {
         "Price match guarantee",
         "24/7 customer support",
       ],
-      accent: "emerald",
-      gradient: "from-emerald-500 via-emerald-400 to-emerald-600",
-      hoverGlow: "group-hover:shadow-emerald-500/25",
-      hoverBorder: "group-hover:border-emerald-500/60",
-      bgGradient:
-        "group-hover:bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent",
-      badge: {
-        text: "Most Popular",
-        color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-      },
+      accent: "emerald" as const,
+      badge: "Most Popular",
       statsIcon: Shield,
       cta: "Start Shopping",
     },
@@ -61,16 +85,8 @@ const RoleSelection = () => {
         "Inventory management",
         "Bulk order processing",
       ],
-      accent: "amber",
-      gradient: "from-amber-500 via-amber-400 to-amber-600",
-      hoverGlow: "group-hover:shadow-amber-500/25",
-      hoverBorder: "group-hover:border-amber-500/60",
-      bgGradient:
-        "group-hover:bg-gradient-to-br from-amber-500/5 via-transparent to-transparent",
-      badge: {
-        text: "Zero Fees",
-        color: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-      },
+      accent: "amber" as const,
+      badge: "Zero Fees",
       statsIcon: TrendingUp,
       cta: "Start Selling",
     },
@@ -90,16 +106,8 @@ const RoleSelection = () => {
         "Insurance coverage",
         "Performance bonuses",
       ],
-      accent: "blue",
-      gradient: "from-blue-500 via-blue-400 to-blue-600",
-      hoverGlow: "group-hover:shadow-blue-500/25",
-      hoverBorder: "group-hover:border-blue-500/60",
-      bgGradient:
-        "group-hover:bg-gradient-to-br from-blue-500/5 via-transparent to-transparent",
-      badge: {
-        text: "Flexible",
-        color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-      },
+      accent: "blue" as const,
+      badge: "Flexible",
       statsIcon: Zap,
       cta: "Start Delivering",
     },
@@ -119,192 +127,108 @@ const RoleSelection = () => {
         "White-label solutions",
         "Advanced reporting",
       ],
-      accent: "violet",
-      gradient: "from-violet-500 via-violet-400 to-violet-600",
-      hoverGlow: "group-hover:shadow-violet-500/25",
-      hoverBorder: "group-hover:border-violet-500/60",
-      bgGradient:
-        "group-hover:bg-gradient-to-br from-violet-500/5 via-transparent to-transparent",
-      badge: {
-        text: "Enterprise",
-        color: "bg-violet-500/10 text-violet-400 border-violet-500/20",
-      },
+      accent: "violet" as const,
+      badge: "Enterprise",
       statsIcon: Users,
       cta: "Partner Now",
     },
   ];
 
   return (
-    <section className="relative pt-20 bg-zinc-950 overflow-hidden">
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl" />
-          <div className="absolute top-1/3 right-1/4 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl" />
-          <div className="absolute bottom-1/4 left-1/3 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl" />
-          <div className="absolute bottom-1/3 right-1/3 w-96 h-96 rounded-full bg-violet-500/10 blur-3xl" />
-        </div>
+    <section
+      id="sellers"
+      className="relative overflow-hidden bg-zinc-50 py-16 md:py-24"
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(50rem_25rem_at_50%_-10%,rgb(16_185_129/0.08),transparent_70%)]" />
 
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_40%,transparent_100%)] pointer-events-none" />
-      </div>
-
-      <div className="container mx-auto px-6 relative z-10">
-        <div className="max-w-3xl mx-auto text-center mb-20">
-          <h2 className="text-5xl md:text-6xl font-bold text-white mb-6 font-mont tracking-tight">
-            Find Your{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-500">
-              Perfect Fit
-            </span>
+      <div className="page-container relative z-10">
+        <div className="mx-auto mb-12 max-w-3xl text-center md:mb-16">
+          <span className="mb-4 inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-700 shadow-sm ring-1 ring-zinc-200">
+            Choose your path
+          </span>
+          <h2 className="font-mont text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl lg:text-5xl">
+            Find Your <span className="text-emerald-600">Perfect Fit</span>
           </h2>
-          <p className="text-xl text-zinc-400 font-noto leading-relaxed mb-12">
+          <p className="mx-auto mt-4 max-w-2xl font-noto text-base leading-relaxed text-zinc-600 sm:text-lg">
             Join thousands of users already thriving on our platform. Select the
             role that fits you best and get started today.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {roles.map((role) => (
-            <div key={role.id} className="group relative">
-              <div
-                className={`relative h-full overflow-hidden rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-900/60 to-zinc-950/60 p-6 lg:p-8 transition-all duration-500 hover:-translate-y-2 ${role.hoverBorder} ${role.hoverGlow} backdrop-blur-sm`}
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
+          {roles.map((role, i) => {
+            const a = accentStyles[role.accent];
+            const featured = role.accent === "emerald";
+            return (
+              <motion.div
+                key={role.id}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.45, delay: (i % 2) * 0.08 }}
+                className={`group relative flex h-full flex-col rounded-2xl border bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl sm:p-7 ${
+                  featured ? "border-emerald-200 ring-1 ring-emerald-100" : "border-zinc-200"
+                } ${a.hover}`}
               >
-                <div
-                  className={`absolute inset-0 opacity-0 transition-opacity duration-500 ${role.bgGradient} group-hover:opacity-100`}
-                />
-
-                <div className="absolute top-4 lg:top-6 right-4 lg:right-6 z-20">
+                {/* Header */}
+                <div className="mb-5 flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                    <div
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ring-1 sm:h-14 sm:w-14 sm:rounded-2xl ${a.icon}`}
+                    >
+                      <role.icon className="h-6 w-6 sm:h-7 sm:w-7" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-mont text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">
+                        {role.title}
+                      </h3>
+                      <p className="text-sm text-zinc-500">{role.subtitle}</p>
+                    </div>
+                  </div>
                   <span
-                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold backdrop-blur-sm ${role.badge.color}`}
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${a.badge}`}
                   >
-                    {role.badge.text}
+                    {role.badge}
                   </span>
                 </div>
 
-                <div className="relative z-10 h-full flex flex-col">
-                  {/* Header */}
-                  <div className="flex items-start justify-between mb-6 lg:mb-8">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={`p-3 lg:p-4 rounded-xl lg:rounded-2xl bg-gradient-to-br from-zinc-900 to-zinc-800 border border-zinc-800 ${
-                          role.accent === "emerald"
-                            ? "text-emerald-400"
-                            : role.accent === "amber"
-                            ? "text-amber-400"
-                            : role.accent === "blue"
-                            ? "text-blue-400"
-                            : "text-violet-400"
-                        }`}
-                      >
-                        <role.icon className="w-6 h-6 lg:w-8 lg:h-8" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl lg:text-2xl font-bold text-white font-mont">
-                          {role.title}
-                        </h3>
-                        <p
-                          className={`text-xs lg:text-sm font-medium ${
-                            role.accent === "emerald"
-                              ? "text-emerald-400/80"
-                              : role.accent === "amber"
-                              ? "text-amber-400/80"
-                              : role.accent === "blue"
-                              ? "text-blue-400/80"
-                              : "text-violet-400/80"
-                          }`}
-                        >
-                          {role.subtitle}
-                        </p>
-                      </div>
+                <p className="mb-6 font-noto text-sm leading-relaxed text-zinc-600 sm:text-base">
+                  {role.description}
+                </p>
+
+                <ul className="mb-6 grid grid-cols-1 gap-x-4 gap-y-2.5 sm:grid-cols-2">
+                  {role.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-zinc-700">
+                      <CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${a.check}`} />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-auto flex flex-col gap-4 border-t border-zinc-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`rounded-lg p-2 ${a.stat}`}>
+                      <role.statsIcon className="h-4 w-4" />
                     </div>
+                    <span className="text-sm font-medium text-zinc-600">
+                      {role.stats}
+                    </span>
                   </div>
 
-                  <p className="text-sm lg:text-base text-zinc-400 font-noto leading-relaxed mb-6 lg:mb-8 flex-grow">
-                    {role.description}
-                  </p>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-6 lg:mb-8">
-                    {role.features.map((feature, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-start gap-2 p-3 rounded-lg border border-zinc-800 bg-zinc-900/50"
-                      >
-                        <CheckCircle2
-                          className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                            role.accent === "emerald"
-                              ? "text-emerald-500"
-                              : role.accent === "amber"
-                              ? "text-amber-500"
-                              : role.accent === "blue"
-                              ? "text-blue-500"
-                              : "text-violet-500"
-                          }`}
-                        />
-                        <span className="text-sm text-zinc-300">{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-auto pt-6 lg:pt-8 border-t border-zinc-800">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`p-2 rounded-lg ${
-                            role.accent === "emerald"
-                              ? "bg-emerald-500/10 text-emerald-400"
-                              : role.accent === "amber"
-                              ? "bg-amber-500/10 text-amber-400"
-                              : role.accent === "blue"
-                              ? "bg-blue-500/10 text-blue-400"
-                              : "bg-violet-500/10 text-violet-400"
-                          }`}
-                        >
-                          <role.statsIcon className="w-5 h-5" />
-                        </div>
-                        <span className="text-sm font-medium text-zinc-400">
-                          {role.stats}
-                        </span>
-                      </div>
-
-                      <button
-                        className={`group/btn relative overflow-hidden rounded-xl px-6 py-3.5 font-semibold text-white transition-all w-full lg:w-auto ${
-                          role.accent === "emerald"
-                            ? "bg-emerald-600 hover:bg-emerald-700"
-                            : role.accent === "amber"
-                            ? "bg-amber-600 hover:bg-amber-700"
-                            : role.accent === "blue"
-                            ? "bg-blue-600 hover:bg-blue-700"
-                            : "bg-violet-600 hover:bg-violet-700"
-                        } hover:shadow-xl active:scale-95`}
-                      >
-                        <span className="relative z-10 flex items-center justify-center lg:justify-start gap-2">
-                          {role.cta}
-                          <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
-                        </span>
-                        <div
-                          className={`absolute inset-0 bg-gradient-to-r ${role.gradient} opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300`}
-                        />
-                      </button>
-                    </div>
-                  </div>
+                  <button
+                    className={`group/btn inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:ring-offset-2 active:scale-[0.98] sm:w-auto ${
+                      featured
+                        ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700"
+                        : "bg-zinc-900 text-white hover:bg-zinc-800"
+                    }`}
+                  >
+                    {role.cta}
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+                  </button>
                 </div>
-              </div>
-
-              <div
-                className={`absolute -top-2 -right-2 w-16 h-16 lg:w-20 lg:h-20 rounded-full ${
-                  role.accent === "emerald"
-                    ? "bg-emerald-500/5"
-                    : role.accent === "amber"
-                    ? "bg-amber-500/5"
-                    : role.accent === "blue"
-                    ? "bg-blue-500/5"
-                    : "bg-violet-500/5"
-                } blur-xl pointer-events-none`}
-              />
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-20 pt-12">
-          <div className="max-w-2xl mx-auto text-center"></div>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </section>

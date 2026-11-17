@@ -1,5 +1,5 @@
-import React, { forwardRef } from "react";
-import { AlertCircle } from "lucide-react";
+import React, { forwardRef, useId } from "react";
+import { AlertCircle } from "@/components/icons";
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -11,62 +11,62 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
   (
-    { label, error, helperText, icon, required, className = "", ...props },
+    { label, error, helperText, icon, required, className = "", id, ...props },
     ref
   ) => {
+    const autoId = useId();
+    const inputId = id ?? autoId;
+
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-semibold text-gray-300 mb-2 font-mont">
+          <label
+            htmlFor={inputId}
+            className="mb-2 block text-sm font-semibold text-ink"
+          >
             {label}
-            {required && <span className="text-red-500 ml-1">*</span>}
+            {required && <span className="ml-1 text-red-500">*</span>}
           </label>
         )}
 
         <div className="relative">
           {/* Icon */}
           {icon && (
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+            <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-black/35 [&_svg]:h-[18px] [&_svg]:w-[18px]">
               {icon}
             </div>
           )}
 
           <input
             ref={ref}
-            className={`
-              w-full px-4 py-3 
-              ${icon ? "pl-10" : ""}
-              bg-[#1F2937] 
-              border-2 
-              ${error ? "border-red-500" : "border-[#10B981]/20"} 
-              rounded-lg 
-              text-white 
-              placeholder-gray-500 
-              focus:outline-none 
-              focus:border-[#10B981] 
-              transition-colors 
-              font-noto
-              ${className}
-            `}
+            id={inputId}
+            aria-invalid={error ? true : undefined}
+            className={`h-12 w-full rounded-2xl border-0 bg-white px-4 text-[15px] text-ink outline-none ring-1 transition placeholder:text-black/35 focus:ring-2 ${
+              icon ? "pl-11" : ""
+            } ${error ? "pr-11" : ""} ${
+              error
+                ? "ring-red-400 focus:ring-red-500"
+                : "ring-black/10 hover:ring-black/20 focus:ring-ink"
+            } ${className}`}
             {...props}
           />
 
           {error && (
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500">
-              <AlertCircle size={20} />
+            <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-red-500">
+              <AlertCircle size={18} />
             </div>
           )}
         </div>
 
         {error && (
-          <p className="mt-1 text-sm text-red-500 font-noto flex items-center gap-1">
+          <p className="mt-2 flex items-center gap-1 text-sm font-medium text-red-600">
             {error}
           </p>
         )}
 
         {/* Helper Text */}
         {helperText && !error && (
-          <p className="mt-1 text-sm text-gray-400 font-noto">{helperText}</p>
+          <p className="mt-2 text-sm text-black/50">{helperText}</p>
         )}
       </div>
     );

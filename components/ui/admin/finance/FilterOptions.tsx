@@ -1,111 +1,53 @@
 "use client"
-import React, { useEffect, useState } from 'react'
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import React from 'react'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { IconAdjustmentsHorizontal, IconSearch } from '@tabler/icons-react'
-import { useAdminContext } from '../AdminContext';
+} from "@/components/ui/select"
+import { IconSearch } from '@/components/icons'
+import { filterBar, searchInput, selectTrigger } from '../ui'
 
+export type EscrowFilter = 'all' | 'held' | 'released' | 'refunded' | 'disputed'
 
-function FilterOptions() {
-    const {transactions, 
-      setTransactions, 
-      transactionsSearchResults,
-      setTransactionsSearchResults, 
-      isSearchingTransactions,
-      setIsSearchingTransactions
-    } = useAdminContext()
+interface FilterOptionsProps {
+  search: string
+  onSearchChange: (value: string) => void
+  status: EscrowFilter
+  onStatusChange: (value: EscrowFilter) => void
+  disabled?: boolean
+}
 
-      const [transactionsFilterValue, setTransactionsFilterValue] = useState("")
-
-    function handleSearch(value:string){
-        setIsSearchingTransactions(true)
-    const newTransactions = transactions.filter((transaction:any)=>{
-            if(transaction.user.toLowerCase().includes(value.toLowerCase())){
-                return transaction
-            }
-        })
-        setTransactionsSearchResults(newTransactions)
-  }
-
-  function handleFiltertransactions(value:string){
-    setIsSearchingTransactions(true)
-       const newTransactions = transactions.filter((transaction:any)=>{
-                if(transaction.status.toLowerCase() === value.toLowerCase()){
-                    return transaction
-                }
-            })
-    setTransactionsSearchResults(newTransactions)
-  }
-
-  useEffect(()=>{
-    if(transactionsFilterValue==="all"){
-      setIsSearchingTransactions(false)
-    }else if(!transactionsFilterValue){
-      return
-    } else{
-      handleFiltertransactions(transactionsFilterValue)
-    }
-  }, [transactionsFilterValue])
-
+function FilterOptions({ search, onSearchChange, status, onStatusChange, disabled }: FilterOptionsProps) {
   return (
-    <div className="bg-white border border-emerald-500/20 rounded-md p-4 cursor-pointer ">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search by name..."
-                onChange={e=>{handleSearch(e.target.value)}}
-                className="w-full bg-gray-50 shadow-none border-gray-200 rounded-sm text-gray-900 placeholder-gray-400 pl-11 pr-4 py-2.5 h-9 focus:outline-none"
-              />
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap gap-3">
-              {/* Status Filter */}
-             {/*} <Select value={usersFilterValue} onValueChange={setUsersFilterValue}>
-                <SelectTrigger className="flex-1 w-[160px] h-9 font-mont bg-gray-50 border-gray-200 rounded-sm">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='all'>All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>*/}
-
-              {/* Date Range Filter */}
-              <Select value={transactionsFilterValue} onValueChange={setTransactionsFilterValue} >
-                <SelectTrigger className="flex-1 w-[160px] h-9 bg-gray-50 border-gray-200 rounded-sm">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="processing">Processing</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-
+    <div className={filterBar}>
+      <label className='relative min-w-0 flex-1'>
+        <span className='sr-only'>Search transactions</span>
+        <IconSearch size={16} className='pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-black/40' />
+        <input
+          type='search'
+          value={search}
+          disabled={disabled}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder='Search order #, store or customer'
+          className={`${searchInput} pl-10`}
+        />
+      </label>
+      <Select value={status} onValueChange={(v) => onStatusChange(v as EscrowFilter)} disabled={disabled}>
+        <SelectTrigger aria-label='Filter by escrow status' className={selectTrigger}>
+          <SelectValue placeholder='All statuses' />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value='all'>All statuses</SelectItem>
+          <SelectItem value='held'>Held</SelectItem>
+          <SelectItem value='released'>Released</SelectItem>
+          <SelectItem value='disputed'>Disputed</SelectItem>
+          <SelectItem value='refunded'>Refunded</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
   )
 }
 

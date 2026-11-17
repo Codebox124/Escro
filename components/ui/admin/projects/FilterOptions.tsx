@@ -17,8 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { IconAdjustmentsHorizontal, IconSearch } from '@tabler/icons-react'
+import { IconAdjustmentsHorizontal, IconSearch } from '@/components/icons'
 import { useAdminContext } from '../AdminContext';
+import { filterBar, inputBase, searchInput, selectTrigger } from '../ui';
 
 
 function FilterOptions() {
@@ -85,24 +86,24 @@ function FilterOptions() {
       }, [filterValue])
 
   return (
-    <div className="bg-white border border-emerald-500/20 rounded-md p-4 cursor-pointer ">
-          <div className="flex flex-col lg:flex-row gap-4">
+    <div className={filterBar}>
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
             {/* Search */}
-            <div className="flex-1 relative">
-              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="relative min-w-0 flex-1">
+              <IconSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
               <Input
                 type="text"
                 placeholder="Search Projects..."
                 onChange={e=>{handleSearch(e.target.value)}}
-                className="w-full bg-gray-50 shadow-none border-gray-200 rounded-sm text-gray-900 placeholder-gray-400 pl-11 pr-4 py-2.5 h-9 focus:outline-none"
+                className={`${searchInput} pl-10`}
               />
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               {/* Status Filter */}
               <Select value={filterValue} onValueChange={setFilterValue}>
-                <SelectTrigger className="flex-1 w-[160px] h-9 font-mont bg-gray-50 border-gray-200 rounded-sm">
+                <SelectTrigger className={selectTrigger}>
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -115,7 +116,7 @@ function FilterOptions() {
 
               {/* Date Range Filter */}
               <Select >
-                <SelectTrigger className="flex-1 w-[160px] h-9 bg-gray-50 border-gray-200 rounded-sm">
+                <SelectTrigger className={selectTrigger}>
                   <SelectValue placeholder="Date Range" />
                 </SelectTrigger>
                 <SelectContent>

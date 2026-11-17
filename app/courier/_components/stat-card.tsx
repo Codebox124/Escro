@@ -4,15 +4,18 @@ import {
   IconTrendingUp,
   IconTrendingDown,
   IconArrowRight,
-} from "@tabler/icons-react";
+} from "@/components/icons";
 import React from "react";
+import Link from "next/link";
 
 interface StatCardProps {
   title: string;
   value: string | number;
-  subtitle: string;
+  subtitle?: string;
   icon: React.ElementType;
   color: "blue" | "amber" | "emerald" | "purple";
+  /** Optional highlight surface. Defaults to a white card. */
+  tone?: "default" | "ink" | "lime";
   action?: {
     label: string;
     href: string;
@@ -20,43 +23,44 @@ interface StatCardProps {
   trend?: {
     value: string;
     isPositive: boolean;
+    /** Neutral (no change) trend. */
+    neutral?: boolean;
   };
   pulsing?: boolean;
   notificationDot?: boolean;
 }
 
-const colorStyles = {
-  blue: {
-    bg: "bg-blue-50",
-    iconBg: "bg-blue-100",
-    iconColor: "text-blue-600",
-    hoverBorder: "hover:border-blue-500",
-    gradient: "to-blue-50/30",
-    dotColor: "bg-blue-500",
+const dotColors = {
+  blue: "bg-sky-500",
+  amber: "bg-amber-500",
+  emerald: "bg-emerald-500",
+  purple: "bg-lime-dark",
+};
+
+const toneStyles = {
+  default: {
+    card: "surface-card card-hover text-ink",
+    label: "text-black/50",
+    sub: "text-black/50",
+    iconBox: "bg-cream text-ink",
+    link: "text-ink",
+    ring: "ring-white",
   },
-  amber: {
-    bg: "bg-amber-50",
-    iconBg: "bg-amber-100",
-    iconColor: "text-amber-600",
-    hoverBorder: "hover:border-amber-500",
-    gradient: "to-amber-50/30",
-    dotColor: "bg-amber-500",
+  ink: {
+    card: "surface-ink card-hover",
+    label: "text-white/55",
+    sub: "text-white/55",
+    iconBox: "bg-white/10 text-lime",
+    link: "text-lime",
+    ring: "ring-ink",
   },
-  emerald: {
-    bg: "bg-emerald-50",
-    iconBg: "bg-emerald-100",
-    iconColor: "text-emerald-600",
-    hoverBorder: "hover:border-emerald-500",
-    gradient: "to-emerald-50/30",
-    dotColor: "bg-emerald-500",
-  },
-  purple: {
-    bg: "bg-purple-50",
-    iconBg: "bg-purple-100",
-    iconColor: "text-purple-600",
-    hoverBorder: "hover:border-purple-500",
-    gradient: "to-purple-50/30",
-    dotColor: "bg-purple-500",
+  lime: {
+    card: "rounded-3xl bg-lime card-hover text-ink",
+    label: "text-ink/60",
+    sub: "text-ink/60",
+    iconBox: "bg-ink text-lime",
+    link: "text-ink",
+    ring: "ring-lime",
   },
 };
 
@@ -66,82 +70,94 @@ const StatCard = ({
   subtitle,
   icon: Icon,
   color,
+  tone = "default",
   action,
   trend,
   pulsing = false,
   notificationDot = false,
 }: StatCardProps) => {
-  const styles = colorStyles[color];
+  const styles = toneStyles[tone];
 
   return (
-    <div
-      className={`group relative bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg ${styles.hoverBorder} transition-all duration-300 overflow-hidden`}
-    >
-      <div className="relative">
+    <div className={`group relative overflow-hidden p-4 sm:p-5 ${styles.card}`}>
+      {tone === "ink" && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-emerald-500/25 blur-3xl"
+        />
+      )}
+      <div className="relative flex h-full flex-col">
         {/* Header: Title and Icon */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <p className="text-gray-500 text-sm font-medium uppercase tracking-wide mb-1">
-              {title}
-            </p>
-          </div>
-          <div className="relative">
+        <div className="flex items-start justify-between gap-3">
+          <p
+            className={`eyebrow pt-1 font-space text-[10px] leading-snug sm:text-[11px] ${styles.label}`}
+          >
+            {title}
+          </p>
+          <div className="relative shrink-0">
             <div
-              className={`${styles.iconColor} ${
-                styles.iconBg
-              } p-2.5 rounded-lg group-hover:scale-110 transition-transform duration-300 ${
+              className={`${styles.iconBox} flex h-10 w-10 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105 sm:h-11 sm:w-11 ${
                 pulsing ? "animate-pulse" : ""
               }`}
             >
-              <Icon className="w-5 h-5" />
+              <Icon className="h-5 w-5" />
             </div>
             {notificationDot && (
-              <span
-                className={`absolute -top-1 -right-1 w-3 h-3 ${styles.dotColor} rounded-full border-2 border-white`}
-              />
+              <span className="absolute -right-0.5 -top-0.5 flex h-3 w-3">
+                <span
+                  className={`absolute inline-flex h-full w-full animate-ping rounded-full ${dotColors[color]} opacity-60`}
+                />
+                <span
+                  className={`relative inline-flex h-3 w-3 rounded-full ${dotColors[color]} ring-2 ${styles.ring}`}
+                />
+              </span>
             )}
           </div>
         </div>
 
         {/* Value */}
-        <div className="mb-2">
-          <h3 className="text-gray-900 text-3xl font-bold tracking-tight font-space">
-            {value}
-          </h3>
-        </div>
+        <h3 className="mt-4 truncate font-space text-2xl font-bold tracking-tight sm:text-3xl">
+          {value}
+        </h3>
 
         {/* Subtitle */}
-        <p className="text-gray-500 text-sm mb-3">{subtitle}</p>
+        {subtitle && (
+          <p className={`mt-1 text-xs sm:text-sm ${styles.sub}`}>{subtitle}</p>
+        )}
 
         {/* Trend Indicator */}
         {trend && (
-          <div className="flex items-center gap-2 mb-3">
-            <div
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-full ${
-                trend.isPositive
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "bg-red-50 text-red-700"
+          <div className="mt-3">
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-space text-[11px] font-bold ${
+                trend.neutral
+                  ? "bg-cream text-black/60"
+                  : trend.isPositive
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-red-100 text-red-700"
               }`}
             >
-              {trend.isPositive ? (
-                <IconTrendingUp className="w-3.5 h-3.5" />
+              {trend.neutral ? null : trend.isPositive ? (
+                <IconTrendingUp className="h-3.5 w-3.5" />
               ) : (
-                <IconTrendingDown className="w-3.5 h-3.5" />
+                <IconTrendingDown className="h-3.5 w-3.5" />
               )}
-              <span className="text-xs font-semibold ">{trend.value}</span>
-            </div>
+              {trend.value}
+            </span>
           </div>
         )}
 
         {/* Action Link */}
         {action && (
-          <button
-            onClick={() => console.log(`Navigate to: ${action.href}`)}
-            className={`inline-flex items-center gap-1.5 text-sm font-medium ${styles.iconColor} hover:underline transition-colors`}
-          >
-            {action.label}
-            <IconArrowRight className="w-4 h-4" />
-          </button>
+          <div className="mt-auto pt-4">
+            <Link
+              href={action.href}
+              className={`inline-flex min-h-11 items-center gap-1.5 rounded-full text-left text-sm font-bold ${styles.link} transition-all hover:gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-dark/60`}
+            >
+              {action.label}
+              <IconArrowRight className="h-4 w-4 shrink-0" />
+            </Link>
+          </div>
         )}
       </div>
     </div>

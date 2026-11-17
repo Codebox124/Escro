@@ -1,8 +1,8 @@
 "use client"
 import React, { useEffect, useState } from 'react'
-import { TbMessageDots } from "react-icons/tb";
-import { TbMessagePlus } from "react-icons/tb";
-import { IoPersonOutline } from 'react-icons/io5';
+import { TbMessageDots } from "@/components/icons";
+import { TbMessagePlus } from "@/components/icons";
+import { IoPersonOutline } from '@/components/icons';
 //import CreateGroupModal from './CreateGroupModal';
 import { useAdminContext } from '../AdminContext';
 
@@ -11,22 +11,23 @@ function Messages({setSelectedSomeone, setConversation}:any) {
     const [showCreateGroupModal, setShowCreateGroupModal] = useState(false)
   return <>
   {/*showCreateGroupModal && <CreateGroupModal setShowCreateGroupModal={setShowCreateGroupModal} />*/}
-    <div className='bg-white flex flex-col gap-3 relative shadow-lg rounded-lg h-full p-6 overflow-y-auto'>
+    <div className='flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2'>
         {conversations.length===0 ? <NoMessages />:
         conversations.map((item: any, index: any)=>{
-          return <div onClick={()=>{setSelectedSomeone(true); setConversation(item)}} className='w-full h-[30px] flex items-center gap-3 p-2 rounded-lg cursor-pointer h-[70px] bg-gray-200' key={item.id}>
+          return <div onClick={()=>{setSelectedSomeone(true); setConversation(item)}} className='flex w-full cursor-pointer items-center gap-3 rounded-2xl p-3 transition-colors hover:bg-cream' key={item.id}>
             { item.type==="regular" &&
-              item.pfp ? <img className='w-[40px] h-[40px] rounded-full' src={item.pfp} alt={item.name} />:
-              <span className='w-[40px] h-[40px] rounded-full bg-gray-300 flex items-center justify-center' > 
+              item.pfp ? <img className='h-11 w-11 shrink-0 rounded-full object-cover' src={item.pfp} alt={item.name} />:
+              <span className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink font-bold text-lime' >
               <IoPersonOutline />
               </span>
             }
-              <div className='flex flex-col'>
-                    <span>{item.name}</span>
-                    <span className='text-gray-500'>{item.messages[item.messages.length - 1].text.substring(0, 10)}...</span>
+              <div className='flex min-w-0 flex-1 flex-col'>
+                    <div className='flex items-baseline justify-between gap-2'>
+                        <span className='truncate text-sm font-semibold text-ink'>{item.name}</span>
+                        <span className='shrink-0 font-space text-[11px] text-black/40'>{new Date(item.messages[item.messages.length-1].timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
+                    </div>
+                    <span className='truncate text-sm text-black/55'>{item.messages[item.messages.length - 1].text.substring(0, 10)}...</span>
                 </div>
-
-                <span className='ml-auto text-sm text-gray-500 mb-7'>{new Date(item.messages[item.messages.length-1].timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
           </div>
         })
         }
@@ -40,9 +41,9 @@ function Messages({setSelectedSomeone, setConversation}:any) {
 export default Messages
 
 function NoMessages(){
-    return <div className='flex text-center gap-1 flex-col items-center justify-center w-full h-full'>
-        <TbMessageDots className='text-7xl bg-[#2D3FE3]/15 p-3 text-gray-500/50 rounded-[50%]' />
-        <h2 className='text-xl font-semibold'>No conversations yet</h2>
-        <p className='text-[#6B7280]'>Start Chatting by searching for users or create a group</p>
+    return <div className='flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center'>
+        <span className='flex h-14 w-14 items-center justify-center rounded-2xl bg-cream text-ink'><TbMessageDots className='text-2xl' /></span>
+        <h2 className='text-lg font-extrabold tracking-[-0.02em] text-ink'>No conversations yet</h2>
+        <p className='text-sm text-black/55'>Start chatting by searching for users or create a group</p>
     </div>
 }

@@ -1,71 +1,43 @@
 "use client"
-import React, { useEffect, useState } from 'react'
-import { IoCheckmarkDone } from "react-icons/io5"
-import { useAgencyContext } from '../AgencyContext';
-import { LuClock2 } from 'react-icons/lu';
-import { TbCancel } from 'react-icons/tb';
+import React, { useMemo } from 'react'
+import { Ban, CheckCircle, ClipboardClock, FolderKanban, Wallet } from '@/components/icons'
+import { formatMoney } from '@/lib/money'
+import StatCard from '../StatCard'
+import { bucketOf, requestValue, type ServiceRequest } from './types'
 
-function Stats() {
-    const [stats, setStats] = useState({
-        completed: 0,
-        inProgress:0,
-        cancelled:0
+function Stats({ requests, loading }: { requests: ServiceRequest[]; loading?: boolean }) {
+  const s = useMemo(() => {
+    const counts = { pending: 0, accepted: 0, completed: 0, declined: 0 }
+    let completedValue = 0
+    const currencies = new Set<string>()
+    requests.forEach((r) => {
+      const b = bucketOf(r.status)
+      if (b !== 'all') counts[b] += 1
+      if (r.status === 'completed') {
+        completedValue += requestValue(r)
+        currencies.add((r.service?.currency || 'ngn').toLowerCase())
+      }
     })
-    const {projects} = useAgencyContext();
+    const currency = currencies.size === 1 ? [...currencies][0] : 'ngn'
+    return { counts, completedValue, currency }
+  }, [requests])
 
-    useEffect(()=>{
-        const completedProjects = projects.filter((project:any)=> project.status==="Completed").length
-        const inProgressProjects = projects.filter((project:any)=> project.status==="In Progress").length
-        const cancelledProjects = projects.filter((project:any)=> project.status==="Cancelled").length
-        setStats({
-            completed: completedProjects,
-            inProgress: inProgressProjects,
-            cancelled: cancelledProjects
-        })
-    }, [projects])
+  const v = (n: number) => (loading ? '—' : n)
+
   return (
-    <div className="flex flex-wrap gap-3">
-        <div
-          className={`flex-1 bg-emerald-500/10 border-emerald-500/20 border px-4 py-2.5 rounded-sm flex items-center gap-2.5 transition-all hover:shadow-sm`}
-        >
-          <IoCheckmarkDone className={`w-5 h-5  text-emerald-500`} />
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium text-emerald-500`}>
-              Completed:
-            </span>
-            <span className={`text-lg font-bold text-emerald-500`}>
-              {stats.completed}
-            </span>
-          </div>
-        </div>
-
-        <div
-          className={`flex-1 bg-blue-500/10 border-blue-500/20 border px-4 py-2.5 rounded-sm flex items-center gap-2.5 transition-all hover:shadow-sm`}
-        >
-          <LuClock2  className={`w-5 h-5  text-blue-500`} />
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium text-blue-500`}>
-              In Progress:
-            </span>
-            <span className={`text-lg font-bold text-blue-500`}>
-              {stats.inProgress}
-            </span>
-          </div>
-        </div>
-
-        <div
-          className={`flex-1 bg-red-500/10 border-red-500/20 border px-4 py-2.5 rounded-sm flex items-center gap-2.5 transition-all hover:shadow-sm`}
-        >
-          <TbCancel className={`w-5 h-5  text-red-500`} />
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium text-red-500`}>
-              Cancelled:
-            </span>
-            <span className={`text-lg font-bold text-red-500`}>
-              {stats.cancelled}
-            </span>
-          </div>
-        </div>
+    <div className='grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5'>
+      <StatCard label='Pending' value={v(s.counts.pending)} icon={ClipboardClock} tone='amber' />
+      <StatCard label='In progress' value={v(s.counts.accepted)} icon={FolderKanban} tone='sky' />
+      <StatCard label='Completed' value={v(s.counts.completed)} icon={CheckCircle} />
+      <StatCard label='Declined' value={v(s.counts.declined)} icon={Ban} tone='red' />
+      <div className='col-span-2 lg:col-span-1'>
+        <StatCard
+          label='Completed value'
+          value={loading ? '—' : formatMoney(s.completedValue, s.currency, { compact: s.completedValue >= 1_000_000 })}
+          icon={Wallet}
+          variant='ink'
+        />
+      </div>
     </div>
   )
 }

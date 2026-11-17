@@ -1,19 +1,14 @@
 "use client"
 import React from 'react'
-import ActiveProjects from './ActiveProjects'
-import Services from './Services'
 import UserDistribution from './UserDistribution'
 import QuickActions from './QuickActions'
+import { AdminOverview } from './shared'
 
-
-
-function DashboardThird() {
+function DashboardThird({ data, loading }: { data: AdminOverview | null; loading: boolean }) {
   return (
-    <div className='flex flex-col md:flex-row gap-4'>
-        <UserDistribution />
-        <QuickActions />
-        {/*<ActiveProjects />
-        <Services />*/}
+    <div className='grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-5'>
+      <UserDistribution byRole={data?.users.byRole ?? null} loading={loading} />
+      <QuickActions openDisputes={data?.disputes.open} />
     </div>
   )
 }

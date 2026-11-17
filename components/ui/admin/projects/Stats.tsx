@@ -1,9 +1,9 @@
 "use client"
 import React, { useEffect, useState } from 'react'
-import { IoCheckmarkDone } from "react-icons/io5"
+import { IoCheckmarkDone } from "@/components/icons"
 import { useAdminContext } from '../AdminContext';
-import { LuClock2 } from 'react-icons/lu';
-import { TbCancel } from 'react-icons/tb';
+import { LuClock2 } from '@/components/icons';
+import { TbCancel } from '@/components/icons';
 
 function Stats() {
     const [stats, setStats] = useState({
@@ -24,46 +24,28 @@ function Stats() {
         })
     }, [projects])
   return (
-    <div className="flex flex-wrap gap-3">
-        <div
-          className={`flex-1 bg-emerald-500/10 border-emerald-500/20 border px-4 py-2.5 rounded-sm flex items-center gap-2.5 transition-all hover:shadow-sm`}
-        >
-          <IoCheckmarkDone className={`w-5 h-5  text-emerald-500`} />
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium text-emerald-500`}>
-              Completed:
-            </span>
-            <span className={`text-lg font-bold text-emerald-500`}>
-              {stats.completed}
-            </span>
+    <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3 sm:gap-4">
+        <div className="surface-card flex min-w-0 items-center gap-3 p-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cream text-ink"><IoCheckmarkDone  className="h-4 w-4" /></span>
+          <div className="min-w-0">
+            <p className="truncate font-space text-[11px] uppercase tracking-widest text-black/45">Completed</p>
+            <p className="font-space text-2xl font-bold tracking-tight text-ink">{stats.completed}</p>
           </div>
         </div>
 
-        <div
-          className={`flex-1 bg-blue-500/10 border-blue-500/20 border px-4 py-2.5 rounded-sm flex items-center gap-2.5 transition-all hover:shadow-sm`}
-        >
-          <LuClock2  className={`w-5 h-5  text-blue-500`} />
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium text-blue-500`}>
-              In Progress:
-            </span>
-            <span className={`text-lg font-bold text-blue-500`}>
-              {stats.inProgress}
-            </span>
+        <div className="surface-card flex min-w-0 items-center gap-3 p-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700"><LuClock2  className="h-4 w-4" /></span>
+          <div className="min-w-0">
+            <p className="truncate font-space text-[11px] uppercase tracking-widest text-black/45">In Progress</p>
+            <p className="font-space text-2xl font-bold tracking-tight text-ink">{stats.inProgress}</p>
           </div>
         </div>
 
-        <div
-          className={`flex-1 bg-red-500/10 border-red-500/20 border px-4 py-2.5 rounded-sm flex items-center gap-2.5 transition-all hover:shadow-sm`}
-        >
-          <TbCancel className={`w-5 h-5  text-red-500`} />
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium text-red-500`}>
-              Cancelled:
-            </span>
-            <span className={`text-lg font-bold text-red-500`}>
-              {stats.cancelled}
-            </span>
+        <div className="surface-card flex min-w-0 items-center gap-3 p-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600"><TbCancel  className="h-4 w-4" /></span>
+          <div className="min-w-0">
+            <p className="truncate font-space text-[11px] uppercase tracking-widest text-black/45">Cancelled</p>
+            <p className="font-space text-2xl font-bold tracking-tight text-ink">{stats.cancelled}</p>
           </div>
         </div>
     </div>

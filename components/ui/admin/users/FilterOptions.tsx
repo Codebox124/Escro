@@ -1,15 +1,6 @@
 "use client"
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import {
   Select,
   SelectContent,
@@ -17,105 +8,76 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { IconAdjustmentsHorizontal, IconSearch } from '@tabler/icons-react'
-import { useAdminContext } from '../AdminContext';
+import { IconSearch, X } from '@/components/icons'
+import { filterBar, searchInput, selectTrigger } from '../ui';
+import { ROLES, ROLE_META, UserRoleFilter, UserStatusFilter } from './types';
 
+interface FilterOptionsProps {
+  search?: string
+  onSearchChange?: (value: string) => void
+  role?: UserRoleFilter
+  onRoleChange?: (value: UserRoleFilter) => void
+  status?: UserStatusFilter
+  onStatusChange?: (value: UserStatusFilter) => void
+}
 
-function FilterOptions() {
-    const {users, 
-      setUsers, 
-      usersTableSearchResults,
-      setUsersTableSearchResults, 
-      isSearchingUsersTable,
-      setIsSearchingUsersTable,
-      handleFilterUsers,
-      usersFilterValue,
-      setUsersFilterValue
-    } = useAdminContext()
+const STATUSES: { value: UserStatusFilter; label: string }[] = [
+  { value: "all", label: "All statuses" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+  { value: "verified", label: "Verified" },
+  { value: "unverified", label: "Unverified" },
+]
 
-      
-
-    function handleSearch(value:string){
-        setIsSearchingUsersTable(true)
-        //let newUsers
-        /*if(!isFilteringUsersTable){
-          newUsers = Users.filter((agent:any)=>{
-            if(agent.name.toLowerCase().includes(value.toLowerCase())){
-                return agent
-            }
-        })
-      }else{
-        newUsers = UsersTableSearchResults.filter((agent:any)=>{
-            if(agent.name.toLowerCase().includes(value.toLowerCase())){
-                return agent
-            }
-        })
-      }*/
-    const newUsers = users.filter((user:any)=>{
-            if(user.name.toLowerCase().includes(value.toLowerCase())){
-                return user
-            }
-        })
-        setUsersTableSearchResults(newUsers)
-  }
-
-
-
-  useEffect(()=>{
-    if(usersFilterValue==="all"){
-      setIsSearchingUsersTable(false)
-    }else if(!usersFilterValue){
-      return
-    } else{
-      handleFilterUsers(usersFilterValue)
-    }
-  }, [usersFilterValue])
-
+function FilterOptions({ search = "", onSearchChange, role = "all", onRoleChange, status = "all", onStatusChange }: FilterOptionsProps) {
   return (
-    <div className="bg-white border border-emerald-500/20 rounded-md p-4 cursor-pointer ">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search Users..."
-                onChange={e=>{handleSearch(e.target.value)}}
-                className="w-full bg-gray-50 shadow-none border-gray-200 rounded-sm text-gray-900 placeholder-gray-400 pl-11 pr-4 py-2.5 h-9 focus:outline-none"
-              />
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap gap-3">
-              {/* Status Filter */}
-             {/*} <Select value={usersFilterValue} onValueChange={setUsersFilterValue}>
-                <SelectTrigger className="flex-1 w-[160px] h-9 font-mont bg-gray-50 border-gray-200 rounded-sm">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='all'>All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>*/}
-
-              {/* Date Range Filter */}
-              <Select value={usersFilterValue} onValueChange={setUsersFilterValue} >
-                <SelectTrigger className="flex-1 w-[160px] h-9 bg-gray-50 border-gray-200 rounded-sm">
-                  <SelectValue placeholder="Role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="store">Store</SelectItem>
-                  <SelectItem value="customer">Customer</SelectItem>
-                  <SelectItem value="agency">Agency</SelectItem>
-                  <SelectItem value="courier">Courier</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+    <div className={filterBar}>
+      <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
+        {/* Search */}
+        <div className="relative min-w-0 flex-1">
+          <IconSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
+          <Input
+            type="search"
+            value={search}
+            aria-label="Search users"
+            placeholder="Search by name, email or phone..."
+            onChange={(e) => onSearchChange?.(e.target.value)}
+            className={`${searchInput} pl-10 pr-10`}
+          />
+          {search && (
+            <button
+              type="button"
+              aria-label="Clear search"
+              onClick={() => onSearchChange?.("")}
+              className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-black/45 hover:bg-cream hover:text-ink"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-row">
+          <Select value={role} onValueChange={(v) => onRoleChange?.(v as UserRoleFilter)}>
+            <SelectTrigger className={`${selectTrigger} sm:w-44`} aria-label="Filter by role">
+              <SelectValue placeholder="Role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All roles</SelectItem>
+              {ROLES.map((r) => <SelectItem key={r} value={r}>{ROLE_META[r].label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Select value={status} onValueChange={(v) => onStatusChange?.(v as UserStatusFilter)}>
+            <SelectTrigger className={`${selectTrigger} sm:w-44`} aria-label="Filter by status">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
   )
 }
 

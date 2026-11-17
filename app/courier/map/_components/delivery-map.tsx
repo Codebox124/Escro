@@ -76,11 +76,11 @@ const DeliveryMap = ({
         bgColor = "#ef4444";
         iconColor = "#ffffff";
       } else if (isPickup) {
-        bgColor = "#3b82f6";
-        iconColor = "#ffffff";
+        bgColor = "#0C110E";
+        iconColor = "#C8F169";
       } else {
-        bgColor = "#10b981";
-        iconColor = "#ffffff";
+        bgColor = "#C8F169";
+        iconColor = "#0C110E";
       }
 
       el.style.backgroundColor = bgColor;
@@ -113,7 +113,7 @@ const DeliveryMap = ({
       border-radius: 6px;
       font-size: 11px;
       font-weight: 600;
-      color: #1f2937;
+      color: #0C110E;
       white-space: nowrap;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
       opacity: ${isSelected ? 1 : 0};
@@ -143,18 +143,18 @@ const DeliveryMap = ({
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    background: #0C110E;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.3), 0 4px 14px -3px rgba(0,0,0,0.3);
+    box-shadow: 0 0 0 4px rgba(200, 241, 105, 0.55), 0 4px 14px -3px rgba(0,0,0,0.3);
     animation: courierPulse 2s infinite;
     z-index: 1000;
   `;
 
     const inner = document.createElement("div");
     inner.innerHTML = `
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C8F169" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="2"></circle>
       <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path>
     </svg>
@@ -171,11 +171,11 @@ const DeliveryMap = ({
     transform: translateX(-50%);
     margin-top: 6px;
     padding: 4px 12px;
-    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    background: #C8F169;
     border-radius: 12px;
     font-size: 11px;
     font-weight: 700;
-    color: white;
+    color: #0C110E;
     white-space: nowrap;
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
   `;
@@ -260,7 +260,7 @@ const DeliveryMap = ({
             "line-cap": "round",
           },
           paint: {
-            "line-color": "#10b981",
+            "line-color": "#0C110E",
             "line-width": 5,
             "line-opacity": 0.8,
           },
@@ -277,9 +277,9 @@ const DeliveryMap = ({
               "line-cap": "round",
             },
             paint: {
-              "line-color": "#059669",
+              "line-color": "#C8F169",
               "line-width": 8,
-              "line-opacity": 0.3,
+              "line-opacity": 0.7,
             },
           },
           "route"
@@ -436,11 +436,11 @@ const DeliveryMap = ({
         @keyframes courierPulse {
           0%,
           100% {
-            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.3),
+            box-shadow: 0 0 0 4px rgba(200, 241, 105, 0.55),
               0 4px 14px -3px rgba(0, 0, 0, 0.3);
           }
           50% {
-            box-shadow: 0 0 0 12px rgba(16, 185, 129, 0.1),
+            box-shadow: 0 0 0 12px rgba(200, 241, 105, 0.15),
               0 4px 14px -3px rgba(0, 0, 0, 0.3);
           }
         }
@@ -466,8 +466,8 @@ const DeliveryMap = ({
       `}</style>
       <div
         ref={mapContainer}
-        className={`w-full h-full rounded-xl overflow-hidden ${className}`}
-        style={{ minHeight: "400px" }}
+        className={`w-full h-full rounded-3xl overflow-hidden ${className}`}
+        style={{ minHeight: "280px" }}
       />
     </>
   );

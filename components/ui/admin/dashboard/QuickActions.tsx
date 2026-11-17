@@ -1,37 +1,50 @@
 "use client"
-import React, { useState } from 'react'
+import React from 'react'
+import { useAdminContext } from '../AdminContext'
+import { ChevronRight, Gavel, IconCurrencyNaira, Users } from '@/components/icons'
+import { cardSubtitle, cardTitle } from '../ui'
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import CreateProjectModal from '../projects/CreateProjectModal';
-import { useAdminContext } from '../AdminContext';
+const actionClass = 'group flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-2xl bg-cream/60 px-3 py-2.5 text-left text-sm font-semibold text-ink transition-colors hover:bg-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-dark/60'
+const iconClass = 'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-ink ring-1 ring-black/5'
 
-function QuickActions() {
-  const {setCurrentPage, handleFilterUsers, setUsersFilterValue} = useAdminContext()
-  return <>
-    
-    <Card className='w-full md:w-[45%]'>
-        <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className='flex flex-col gap-3 max-h-[430px] overflow-y-auto'>
-            <button onClick={()=>{setCurrentPage("Users"); handleFilterUsers("Customer"); setUsersFilterValue("customer")}} className='bg-emerald-700 text-white w-full p-3 rounded-lg cursor-pointer'>Manage Customers</button>
-            <button onClick={()=>{setCurrentPage("Users"); handleFilterUsers("Store"); setUsersFilterValue("store")}} className='bg-emerald-700 text-white w-full p-3 rounded-lg cursor-pointer'>Manage Stores</button>
-            <button onClick={()=>{setCurrentPage("Users"); handleFilterUsers("Agency"); setUsersFilterValue("agency")}} className='bg-emerald-700 text-white w-full p-3 rounded-lg cursor-pointer'>Manage Agencies</button>
-            <button onClick={()=>{setCurrentPage("Users"); handleFilterUsers("Courier"); setUsersFilterValue("courier")}} className='bg-emerald-700 text-white w-full p-3 rounded-lg cursor-pointer'>Manage Couriers</button>
-            <button onClick={()=>{setCurrentPage("Settings")}} className='bg-emerald-700 text-white w-full p-3 rounded-lg cursor-pointer'>Platform Settings</button>
-            <button onClick={()=>{setCurrentPage("Disputes")}} className='bg-emerald-700 text-white w-full p-3 rounded-lg cursor-pointer'>Settle Disputes</button>
-        </CardContent>
-       
-    </Card>
-    </>
-  
+function QuickActions({ openDisputes }: { openDisputes?: number }) {
+  const { setCurrentPage } = useAdminContext()
+
+  const actions = [
+    {
+      label: 'Review disputes',
+      hint: openDisputes ? `${openDisputes} open` : 'Settle buyer/seller claims',
+      page: 'Disputes',
+      icon: Gavel,
+      iconCls: openDisputes ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700 ring-1 ring-amber-200' : iconClass,
+    },
+    { label: 'Manage users', hint: 'Verify, activate or change roles', page: 'Users', icon: Users, iconCls: iconClass },
+    { label: 'View finance', hint: 'Escrow, payouts and transactions', page: 'Finance', icon: IconCurrencyNaira, iconCls: iconClass },
+  ]
+
+  return (
+    <div className='surface-card flex min-w-0 flex-col gap-4 p-4 sm:p-6 lg:col-span-2'>
+      <div>
+        <h2 className={cardTitle}>Quick actions</h2>
+        <p className={cardSubtitle}>Jump straight to common admin tasks.</p>
+      </div>
+      <div className='grid grid-cols-1 gap-2'>
+        {actions.map((a) => {
+          const Icon = a.icon
+          return (
+            <button key={a.page} type='button' onClick={() => setCurrentPage(a.page)} className={actionClass}>
+              <span className={a.iconCls}><Icon size={16} /></span>
+              <span className='flex min-w-0 flex-col'>
+                <span>{a.label}</span>
+                <span className='truncate text-xs font-medium text-black/50'>{a.hint}</span>
+              </span>
+              <ChevronRight size={16} className='ml-auto shrink-0 text-black/40 transition-transform group-hover:translate-x-0.5 group-hover:text-ink' />
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 export default QuickActions

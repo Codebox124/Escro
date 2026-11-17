@@ -1,6 +1,7 @@
 "use client";
 
-import { IconSearch, IconMenu2 } from "@tabler/icons-react";
+import { useState } from "react";
+import { IconSearch, IconMenu2, IconBell, IconChevronDown } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -11,95 +12,112 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { authService } from "@/services/auth"; // Make sure you have a logout function here
 
-interface NavbarProps {
-  userName?: string;
-}
+const Navbar = () => {
+  type User = {
+    name?: string;
+    email?: string;
+    // add other properties if needed
+  };
 
-const Navbar = ({ userName = "John" }: NavbarProps) => {
+  const { user, loading } = useCurrentUser() as { user: User | null; loading: boolean };
+
+  const handleLogout = async () => {
+    try {
+      authService.logout(); // clears token/cookies and redirects to /login
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  };
+
   return (
-    <nav className="bg-emerald-900 border-b border-gray-700 px-6 py-5 sticky top-0 z-10">
-      <div className="flex items-center justify-between gap-6">
-        {/* Mobile Sidebar Toggle */}
-        <SidebarTrigger
-          className="lg:hidden p-2 hover:bg-emerald-500/10 cursor-pointer rounded-md text-gray-300  hover:text-emerald-500  transition-all"
-          size={"lg"}
-        />
+    <nav className="sticky top-0 z-20 border-b border-black/5 bg-cream/80 backdrop-blur-xl supports-[backdrop-filter]:bg-cream/70">
+      <div className="flex h-16 items-center gap-2 px-3 sm:h-[72px] sm:gap-4 sm:px-6 lg:px-8">
+        {/* Sidebar Toggle (off-canvas on mobile, collapse on desktop) */}
+        <SidebarTrigger className="hidden lg:inline-flex size-11 shrink-0 cursor-pointer rounded-full bg-white text-ink ring-1 ring-black/5 transition-colors hover:bg-ink hover:text-white focus-visible:ring-2 focus-visible:ring-lime-dark/60" />
 
         {/* Search Bar */}
-        <div className=""></div>
-
-        <div className="flex items-center gap-4">
-          <div className="flex-1 max-w-2xl">
-            <div className="relative">
-              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search..."
-                className="w-full bg-emerald-900 border border-gray-500 text-gray-100 placeholder-gray-400 rounded-lg pl-11 pr-4 py-2.5 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
-              />
-            </div>
+        <div className="min-w-0 flex-1 max-w-xl">
+          <div className="relative">
+            <IconSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
+            <input
+              type="text"
+              placeholder="Search..."
+              className="h-11 w-full rounded-full bg-white pl-10 pr-4 text-sm text-ink ring-1 ring-black/5 placeholder:text-black/40 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-dark/60"
+            />
           </div>
-          {/* Divider */}
-          <div className="w-px h-8 bg-gray-500"></div>
+        </div>
 
-          {/* User Section */}
-          <div className="flex items-center gap-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger className="focus:outline-none focus:ring-2 focus:ring-emerald-500/20 rounded-full">
-                <Avatar className="w-10 h-10 cursor-pointer ring-2 ring-transparent hover:ring-emerald-500/50 transition-all">
-                  <AvatarImage
-                    src={`https://api.dicebear.com/9.x/glass/svg?seed=${userName}`}
-                  />
-                  <AvatarFallback className="bg-linear-to-br from-emerald-500 to-emerald-600 text-white font-semibold">
-                    {userName.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
+        {/* User Section */}
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <button
+            type="button"
+            aria-label="Notifications"
+            className="relative hidden size-11 items-center justify-center rounded-full bg-white text-ink ring-1 ring-black/5 transition-colors hover:bg-ink hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-dark/60 sm:inline-flex"
+          >
+            <IconBell className="h-5 w-5" stroke={1.75} />
+            <span className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full bg-lime ring-2 ring-white" />
+          </button>
 
-              <DropdownMenuContent
-                align="end"
-                className="w-56 bg-emerald-900 border-gray-500 text-gray-100"
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex h-11 items-center gap-2 rounded-full bg-white p-1 pr-1 ring-1 ring-black/5 transition-colors hover:ring-black/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-dark/60 md:pr-3">
+              <Avatar className="h-9 w-9 cursor-pointer">
+                <AvatarImage
+                  src={`https://api.dicebear.com/9.x/glass/svg?seed=${user?.name || "User"}`}
+                />
+                <AvatarFallback className="bg-ink font-bold text-lime">
+                  {user?.name?.charAt(0)?.toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+              <span className="hidden max-w-[10rem] truncate text-sm font-bold text-ink md:block">
+                {user?.name || "User"}
+              </span>
+              <IconChevronDown className="hidden h-4 w-4 text-black/40 md:block" />
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent
+              align="end"
+              className="w-64 rounded-3xl border-black/5 bg-white p-2 font-mont text-black/70 shadow-xl shadow-black/10"
+            >
+              <DropdownMenuLabel className="mb-1 rounded-2xl bg-cream px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-ink">{user?.name || "User"}</p>
+                  <p className="truncate font-space text-[11px] font-normal text-black/50">
+                    {user?.email || "email@example.com"}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+
+              <DropdownMenuItem className="cursor-pointer rounded-full px-3 py-2.5 font-medium text-black/70 focus:bg-cream focus:text-ink">
+                <a href="/mystore/profile" className="w-full">
+                  Profile Settings
+                </a>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem className="cursor-pointer rounded-full px-3 py-2.5 font-medium text-black/70 focus:bg-cream focus:text-ink">
+                <a href="/mystore/settings" className="w-full">
+                  Store Settings
+                </a>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem className="cursor-pointer rounded-full px-3 py-2.5 font-medium text-black/70 focus:bg-cream focus:text-ink">
+                <a href="#" className="w-full">
+                  Billing
+                </a>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator className="bg-black/5" />
+
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="cursor-pointer rounded-full px-3 py-2.5 font-semibold text-red-600 focus:bg-red-50 focus:text-red-700"
               >
-                <DropdownMenuLabel className="text-white">
-                  <div>
-                    <p className="font-medium">{userName}</p>
-                    <p className="text-gray-400 text-sm font-normal">
-                      owner@escro.com
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-
-                <DropdownMenuSeparator className="bg-gray-500" />
-
-                <DropdownMenuItem className="text-gray-300 focus:bg-emerald-500/50 focus:text-emerald-500 cursor-pointer">
-                  <a href="/mystore/profile" className="w-full">
-                    Profile Settings
-                  </a>
-                </DropdownMenuItem>
-
-                <DropdownMenuItem className="text-gray-300 focus:bg-emerald-500/50 focus:text-emerald-500 cursor-pointer">
-                  <a href="/mystore/settings" className="w-full">
-                    Store Settings
-                  </a>
-                </DropdownMenuItem>
-
-                <DropdownMenuItem className="text-gray-300 focus:bg-emerald-500/50 focus:text-emerald-500 cursor-pointer">
-                  <a href="#" className="w-full">
-                    Billing
-                  </a>
-                </DropdownMenuItem>
-
-                <DropdownMenuSeparator className="bg-gray-500" />
-
-                <DropdownMenuItem className="text-error-main focus:bg-emerald-500 focus:text-emerald-500 cursor-pointer">
-                  <a href="#" className="w-full">
-                    Sign Out
-                  </a>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </nav>

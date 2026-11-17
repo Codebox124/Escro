@@ -1,10 +1,10 @@
 export const menuAnimation = {
-    initial:{x:"-100vh"},
+    initial:{x:"-100%"},
     animate: {x:0}
 }
 
 export const alertAnimation = {
-    initial:{x:"100vh"},
+    initial:{x:"110%"},
     animate: {x:0}
 }
 

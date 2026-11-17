@@ -7,7 +7,6 @@ import PROJECTS from "@/components/ui/admin/data/projects.json"
 import USERINFO from "@/components/ui/admin/data/userInfo.json"
 import CONVERSATIONS from "@/components/ui/admin/data/conversations.json"
 import USERS from "@/components/ui/admin/data/users.json"
-import DISPUTES from "@/components/ui/admin/data/disputes.json"
 import TRANSACTIONS from "@/components/ui/admin/data/transactions.json"
 //import users from "@/components/ui/agency/data/users.json"
 
@@ -20,35 +19,30 @@ const AdminContext = createContext<any>(null)
 export const AdminContextProvider = ({children}:Props) =>{
 
     const [services, setServices]= useState(SERVICES)
-    const [disputes, setDisputes] = useState(DISPUTES)
     const [transactions, setTransactions] = useState(TRANSACTIONS)
     const [isSearchingTransactions, setIsSearchingTransactions] = useState(false)
     const [transactionsSearchResults, setTransactionsSearchResults] = useState([])
-    const [isSearchingDisputes, setIsSearchingDisputes] = useState(false)
-    const [disputesSearchResults, setDisputesSearchResults] = useState([])
     const [projects, setProjects] = useState<any>()
     const [minimize, setMinimize] = useState(true)
-    const [showUserInfo, setShowUserInfo] = useState(false)
-    const [selectedUser, setSelectedUser] = useState(null)
     const [selectedProject, setSelectedProject] = useState(null)
     const [currentPage, setCurrentPage] = useState("")
     const [showNotifications, setShowNotifications] = useState(false)
      useEffect(() => {
        //projects
-        
+
         calculateProgress(PROJECTS)
-        
+
 
     //currentpage
-    const gotten = localStorage.getItem("admin-current-page")
-    if (gotten) {
-      setCurrentPage(JSON.parse(gotten))
-    }else{
-        setCurrentPage("Dashboard")
-    }
+    // Restore the last page only if it still exists — an empty/stale saved value
+    // used to leave the screen blank on first login until a menu item was clicked.
+    const VALID_PAGES = ["Dashboard", "Users", "Disputes", "Finance", "Settings"]
+    let saved = ""
+    try { saved = JSON.parse(localStorage.getItem("admin-current-page") || '""') } catch { saved = "" }
+    setCurrentPage(VALID_PAGES.includes(saved) ? saved : "Dashboard")
   }, [])
     useEffect(()=>{
-        localStorage.setItem("admin-current-page", JSON.stringify(currentPage))
+        if (currentPage) localStorage.setItem("admin-current-page", JSON.stringify(currentPage))
     }, [currentPage])
 
     function calculateProgress(projs:any){
@@ -66,11 +60,10 @@ export const AdminContextProvider = ({children}:Props) =>{
     const [userInfo, setUserInfo] = useState(USERINFO)
     const [conversations, setConversations] = useState(CONVERSATIONS)
     const [isSearching, setIsSearching] = useState(false)
+    // Static users — still read by Messages search + Dashboard widgets. The Users page loads live data from adminApi.users.
     const [users, setUsers] = useState(USERS)
-    //const [users, setusers] = useState(users)
-    const [usersTableSearchResults, setUsersTableSearchResults] = useState<any[]>([])
-   const [isSearchingUsersTable, setIsSearchingUsersTable] = useState(false)
-   const [usersFilterValue, setUsersFilterValue] = useState("")
+   // Role filter for the Users page ("all" | customer | seller | courier | agency | admin; legacy "store" maps to seller)
+   const [usersFilterValue, setUsersFilterValue] = useState("all")
    const [projectsSearchResults, setprojectsSearchResults] = useState([])
    const [isSearchingProjects, setIsSearchingProjects] = useState(false)
    const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
@@ -85,14 +78,9 @@ export const AdminContextProvider = ({children}:Props) =>{
     }
 
 
+    /** Pre-selects the role filter on the Users page (data is fetched there). */
     function handleFilterUsers(value:string){
-           setIsSearchingUsersTable(true)
-       const newUsers = users.filter((user:any)=>{
-                if(user.role.toLowerCase() === value.toLowerCase()){
-                    return user
-                }
-            })
-          setUsersTableSearchResults(newUsers)
+        setUsersFilterValue((value || "all").toLowerCase())
     }
 
     const values = {
@@ -121,14 +109,6 @@ export const AdminContextProvider = ({children}:Props) =>{
         setUsers,
         /*users,
         setusers,*/
-        usersTableSearchResults,
-        setUsersTableSearchResults,
-        isSearchingUsersTable, 
-        setIsSearchingUsersTable,
-        showUserInfo,  
-        setShowUserInfo,
-        selectedUser,
-        setSelectedUser,
         isSearchingProjects,
         setIsSearchingProjects,
         projectsSearchResults,
@@ -145,12 +125,6 @@ export const AdminContextProvider = ({children}:Props) =>{
         handleFilterUsers,
         usersFilterValue,
         setUsersFilterValue,
-        disputes,
-        setDisputes,
-        isSearchingDisputes,
-        setIsSearchingDisputes,
-        disputesSearchResults,
-        setDisputesSearchResults,
         transactions,
         setTransactions,
         isSearchingTransactions,

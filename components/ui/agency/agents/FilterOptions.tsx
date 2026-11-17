@@ -1,139 +1,56 @@
 "use client"
-import React, { useEffect, useState } from 'react'
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { IconAdjustmentsHorizontal, IconSearch } from '@tabler/icons-react'
-import { useAgencyContext } from '../AgencyContext';
+import React from 'react'
+import { IconSearch } from '@/components/icons'
+import { filterBar, searchInput } from '../ui'
 
+export type AgentStatusFilter = 'all' | 'online' | 'offline'
 
-function FilterOptions() {
-    const {agents, 
-      setAgents, 
-      agentsTableSearchResults,
-      setAgentsTableSearchResults, 
-      isSearchingAgentsTable,
-      setIsSearchingAgentsTable} = useAgencyContext()
+const OPTIONS: { value: AgentStatusFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'online', label: 'Online' },
+  { value: 'offline', label: 'Offline' },
+]
 
-      const [filterValue, setFilterValue] = useState("")
-
-    function handleSearch(value:string){
-        setIsSearchingAgentsTable(true)
-        //let newAgents
-        /*if(!isFilteringAgentsTable){
-          newAgents = agents.filter((agent:any)=>{
-            if(agent.name.toLowerCase().includes(value.toLowerCase())){
-                return agent
-            }
-        })
-      }else{
-        newAgents = agentsTableSearchResults.filter((agent:any)=>{
-            if(agent.name.toLowerCase().includes(value.toLowerCase())){
-                return agent
-            }
-        })
-      }*/
-    const newAgents = agents.filter((agent:any)=>{
-            if(agent.name.toLowerCase().includes(value.toLowerCase())){
-                return agent
-            }
-        })
-        setAgentsTableSearchResults(newAgents)
-  }
-
-function handleFilter(value:string){
-       setIsSearchingAgentsTable(true)
-       // let newAgents
-       /* if(!isSearchingAgentsTable){
-          newAgents = agents.filter((agent:any)=>{
-            if(agent.status.toLowerCase() === value.toLowerCase()){
-                return agent
-            }
-        })
-      }else{
-        newAgents = agentsTableSearchResults.filter((agent:any)=>{
-            if(agent.status.toLowerCase() === value.toLowerCase()){
-                return agent
-            }
-        })
-      }*/
-   const newAgents = agents.filter((agent:any)=>{
-            if(agent.status.toLowerCase() === value.toLowerCase()){
-                return agent
-            }
-        })
-      setAgentsTableSearchResults(newAgents)
+interface FilterOptionsProps {
+  query: string
+  onQueryChange: (v: string) => void
+  status: AgentStatusFilter
+  onStatusChange: (v: AgentStatusFilter) => void
+  counts: Record<AgentStatusFilter, number>
 }
 
-  useEffect(()=>{
-    if(filterValue==="all"){
-      setIsSearchingAgentsTable(false)
-    }else if(!filterValue){
-      return
-    } else{
-      handleFilter(filterValue)
-    }
-  }, [filterValue])
-
+function FilterOptions({ query, onQueryChange, status, onStatusChange, counts }: FilterOptionsProps) {
   return (
-    <div className="bg-white border border-emerald-500/20 rounded-md p-4 cursor-pointer ">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search Agents..."
-                onChange={e=>{handleSearch(e.target.value)}}
-                className="w-full bg-gray-50 shadow-none border-gray-200 rounded-sm text-gray-900 placeholder-gray-400 pl-11 pr-4 py-2.5 h-9 focus:outline-none"
-              />
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap gap-3">
-              {/* Status Filter */}
-              <Select value={filterValue} onValueChange={setFilterValue}>
-                <SelectTrigger className="flex-1 w-[160px] h-9 font-mont bg-gray-50 border-gray-200 rounded-sm">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='all'>All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Date Range Filter */}
-              <Select >
-                <SelectTrigger className="flex-1 w-[160px] h-9 bg-gray-50 border-gray-200 rounded-sm">
-                  <SelectValue placeholder="Date Range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="7days">Last 7 Days</SelectItem>
-                  <SelectItem value="30days">Last 30 Days</SelectItem>
-                  <SelectItem value="3months">Last 3 Months</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-
+    <div className={filterBar}>
+      <div className="relative min-w-0 flex-1">
+        <IconSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => onQueryChange(e.target.value)}
+          placeholder="Search by name, email, phone or vehicle…"
+          aria-label="Search agents"
+          className={`${searchInput} pl-10`}
+        />
+      </div>
+      <div role="tablist" aria-label="Filter by status" className="inline-flex w-full shrink-0 rounded-full bg-cream p-1 sm:w-auto">
+        {OPTIONS.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            role="tab"
+            aria-selected={status === o.value}
+            onClick={() => onStatusChange(o.value)}
+            className={`flex h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full px-3.5 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-dark/60 sm:flex-none ${
+              status === o.value ? 'bg-ink text-white' : 'text-black/60 hover:text-ink'
+            }`}
+          >
+            {o.label}
+            <span className={`font-space text-[11px] ${status === o.value ? 'text-lime' : 'text-black/40'}`}>{counts[o.value]}</span>
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 

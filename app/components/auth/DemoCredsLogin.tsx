@@ -8,7 +8,7 @@ import {
   ChevronUp,
   TestTube2,
   LogIn,
-} from "lucide-react";
+} from "@/components/icons";
 import { useRouter } from "next/navigation";
 
 interface DemoCredsProps {

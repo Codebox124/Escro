@@ -8,7 +8,7 @@ import {
   EyeOff,
   CheckCircle2,
   Circle,
-} from "lucide-react";
+} from "@/components/icons";
 
 interface StepOneProps {
   formData: {
@@ -71,11 +71,10 @@ const StepOne: React.FC<StepOneProps> = ({
       <form className="space-y-5">
         <div className="group relative">
           <div
-            className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${
-              errors.fullName
+            className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${errors.fullName
                 ? "text-red-500"
                 : "text-gray-400 group-focus-within:text-emerald-500"
-            }`}
+              }`}
           >
             <User size={20} />
           </div>
@@ -84,21 +83,19 @@ const StepOne: React.FC<StepOneProps> = ({
             placeholder="Full Name"
             value={formData.fullName}
             onChange={(e) => onChange("fullName", e.target.value)}
-            className={`w-full bg-gray-50 text-gray-900 placeholder-gray-400 pl-12 pr-4 py-4 rounded-xl border-2 outline-none transition-all duration-300 font-medium ${
-              errors.fullName
+            className={`w-full bg-gray-50 text-gray-900 placeholder-gray-400 pl-12 pr-4 py-4 rounded-xl border-2 outline-none transition-all duration-300 font-medium ${errors.fullName
                 ? "border-red-500/50 focus:border-red-500 bg-red-50"
                 : "border-gray-200 focus:border-emerald-500 focus:bg-white focus:shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)]"
-            }`}
+              }`}
           />
         </div>
 
         <div className="group relative">
           <div
-            className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${
-              errors.email
+            className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${errors.email
                 ? "text-red-500"
                 : "text-gray-400 group-focus-within:text-emerald-500"
-            }`}
+              }`}
           >
             <Mail size={20} />
           </div>
@@ -107,21 +104,19 @@ const StepOne: React.FC<StepOneProps> = ({
             placeholder="Email Address"
             value={formData.email}
             onChange={(e) => onChange("email", e.target.value)}
-            className={`w-full bg-gray-50 text-gray-900 placeholder-gray-400 pl-12 pr-4 py-4 rounded-xl border-2 outline-none transition-all duration-300 font-medium ${
-              errors.email
+            className={`w-full bg-gray-50 text-gray-900 placeholder-gray-400 pl-12 pr-4 py-4 rounded-xl border-2 outline-none transition-all duration-300 font-medium ${errors.email
                 ? "border-red-500/50 focus:border-red-500 bg-red-50"
                 : "border-gray-200 focus:border-emerald-500 focus:bg-white focus:shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)]"
-            }`}
+              }`}
           />
         </div>
 
         <div className="group relative">
           <div
-            className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${
-              errors.phone
+            className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${errors.phone
                 ? "text-red-500"
                 : "text-gray-400 group-focus-within:text-emerald-500"
-            }`}
+              }`}
           >
             <Phone size={20} />
           </div>
@@ -130,22 +125,20 @@ const StepOne: React.FC<StepOneProps> = ({
             placeholder="+234 800 000 0000"
             value={formData.phone}
             onChange={(e) => onChange("phone", e.target.value)}
-            className={`w-full bg-gray-50 text-gray-900 placeholder-gray-400 pl-12 pr-4 py-4 rounded-xl border-2 outline-none transition-all duration-300 font-medium ${
-              errors.phone
+            className={`w-full bg-gray-50 text-gray-900 placeholder-gray-400 pl-12 pr-4 py-4 rounded-xl border-2 outline-none transition-all duration-300 font-medium ${errors.phone
                 ? "border-red-500/50 focus:border-red-500 bg-red-50"
                 : "border-gray-200 focus:border-emerald-500 focus:bg-white focus:shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)]"
-            }`}
+              }`}
           />
         </div>
 
         <div className="space-y-3 pt-2">
           <div className="group relative">
             <div
-              className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${
-                errors.password
+              className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${errors.password
                   ? "text-red-500"
                   : "text-gray-400 group-focus-within:text-emerald-500"
-              }`}
+                }`}
             >
               <Lock size={20} />
             </div>
@@ -156,11 +149,10 @@ const StepOne: React.FC<StepOneProps> = ({
               onFocus={() => setPasswordFocus(true)}
               onBlur={() => setPasswordFocus(false)}
               onChange={(e) => onChange("password", e.target.value)}
-              className={`w-full bg-gray-50 text-gray-900 placeholder-gray-400 pl-12 pr-12 py-4 rounded-xl border-2 outline-none transition-all duration-300 font-medium ${
-                errors.password
+              className={`w-full bg-gray-50 text-gray-900 placeholder-gray-400 pl-12 pr-12 py-4 rounded-xl border-2 outline-none transition-all duration-300 font-medium ${errors.password
                   ? "border-red-500/50 focus:border-red-500 bg-red-50"
                   : "border-gray-200 focus:border-emerald-500 focus:bg-white focus:shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)]"
-              }`}
+                }`}
             />
             <button
               type="button"
@@ -172,11 +164,10 @@ const StepOne: React.FC<StepOneProps> = ({
           </div>
 
           <div
-            className={`overflow-hidden transition-all duration-500 ease-in-out ${
-              passwordFocus || formData.password.length > 0
+            className={`overflow-hidden transition-all duration-500 ease-in-out ${passwordFocus || formData.password.length > 0
                 ? "max-h-32 opacity-100"
                 : "max-h-0 opacity-0"
-            }`}
+              }`}
           >
             <div className="bg-gray-100 rounded-lg p-4 border border-gray-200 grid grid-cols-2 gap-3">
               {requirements.map((req, idx) => (
@@ -200,15 +191,14 @@ const StepOne: React.FC<StepOneProps> = ({
 
             <div className="h-1 w-full bg-gray-200 mt-3 rounded-full overflow-hidden">
               <div
-                className={`h-full transition-all duration-500 ease-out ${
-                  strengthScore <= 1
+                className={`h-full transition-all duration-500 ease-out ${strengthScore <= 1
                     ? "bg-red-500 w-1/4"
                     : strengthScore === 2
-                    ? "bg-amber-500 w-2/4"
-                    : strengthScore === 3
-                    ? "bg-blue-500 w-3/4"
-                    : "bg-emerald-500 w-full shadow-[0_0_10px_rgba(16,185,129,0.3)]"
-                }`}
+                      ? "bg-amber-500 w-2/4"
+                      : strengthScore === 3
+                        ? "bg-blue-500 w-3/4"
+                        : "bg-emerald-500 w-full shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                  }`}
               />
             </div>
           </div>
@@ -216,11 +206,10 @@ const StepOne: React.FC<StepOneProps> = ({
 
         <div className="group relative">
           <div
-            className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${
-              errors.confirmPassword
+            className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${errors.confirmPassword
                 ? "text-red-500"
                 : "text-gray-400 group-focus-within:text-emerald-500"
-            }`}
+              }`}
           >
             <Lock size={20} />
           </div>
@@ -229,11 +218,10 @@ const StepOne: React.FC<StepOneProps> = ({
             placeholder="Confirm Password"
             value={formData.confirmPassword}
             onChange={(e) => onChange("confirmPassword", e.target.value)}
-            className={`w-full bg-gray-50 text-gray-900 placeholder-gray-400 pl-12 pr-12 py-4 rounded-xl border-2 outline-none transition-all duration-300 font-medium ${
-              errors.confirmPassword
+            className={`w-full bg-gray-50 text-gray-900 placeholder-gray-400 pl-12 pr-12 py-4 rounded-xl border-2 outline-none transition-all duration-300 font-medium ${errors.confirmPassword
                 ? "border-red-500/50 focus:border-red-500 bg-red-50"
                 : "border-gray-200 focus:border-emerald-500 focus:bg-white focus:shadow-[0_0_20px_-5px_rgba(16,185,129,0.3)]"
-            }`}
+              }`}
           />
           <button
             type="button"

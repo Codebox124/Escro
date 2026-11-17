@@ -2,16 +2,9 @@
 
 import React, { useEffect, useState } from 'react'
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { useAgencyContext } from '../AgencyContext';
-import { X } from 'lucide-react';
+import { X } from '@/components/icons';
+import { btnPrimary, btnSecondary, inputBase, modalOverlay, modalPanel } from '../ui';
 
 interface AddProjectProps{
     setShowCreateProjectModal: any
@@ -67,32 +60,43 @@ function CreateProjectModal({setShowCreateProjectModal}:AddProjectProps) {
     setMilestones(newMileStones)
   }
   return (
-    <div className='fixed p-4 inset-0 backdrop-blur-[20px] z-20 flex items-center justify-center'>
-        <Card className='w-full md:w-[50vw]'>
-            <CardHeader>
-                <CardTitle>Add New Project</CardTitle>
-                <CardDescription>Fill in the details below to add a new project.</CardDescription>
-            </CardHeader>
-            <CardContent className='flex flex-col gap-4'>
-                <input value={newProject.name} onChange={(e)=>{setNewProject({...newProject, name:e.target.value })}} type="text" placeholder='Project Name (e.g Frontend Development)' className='border p-2 rounded-lg w-full'/>
-                <input value={newProject.client} onChange={(e)=>{setNewProject({...newProject, client:e.target.value })}} type="text" placeholder='Client Name (e.g. Ryan LLC)' className='border p-2 rounded-lg w-full' />
-                <input value={newProject.date} onChange={(e)=>{setNewProject({...newProject, date:e.target.value })}} type="date"  className='border p-2 rounded-lg w-full' />
-                <input onKeyDown={(e:any)=>{e.key==="Enter" && handleMilestone(e.target.value)}} value={mileText} onChange={(e)=>{setMileText(e.target.value)}} type="text" placeholder='Add Milestone...'  className='border p-2 rounded-lg w-full' />
-                <Card className='shadow-none bg-gray-100'>
-                  <CardContent className='flex flex-wrap gap-3'>
+    <div className={`${modalOverlay} z-[60]`}>
+        <div className={`${modalPanel} font-mont`}>
+            <div className='flex items-start justify-between gap-3 border-b border-black/5 p-5 sm:px-6'>
+                <div>
+                    <h3 className='text-lg font-extrabold tracking-[-0.02em] text-ink'>Add New Project</h3>
+                    <p className='mt-1 text-sm text-black/55'>Fill in the details below to add a new project.</p>
+                </div>
+                <button type='button' aria-label='Close' onClick={()=>{setShowCreateProjectModal(false)}} className='inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-cream text-ink transition-colors hover:bg-lime'><X size={18} /></button>
+            </div>
+            <div className='flex flex-col gap-4 p-5 sm:px-6'>
+                <label className='flex flex-col gap-1.5 text-sm font-medium text-black/70'>Project name
+                    <input value={newProject.name} onChange={(e)=>{setNewProject({...newProject, name:e.target.value })}} type="text" placeholder='e.g. Frontend Development' className={inputBase}/>
+                </label>
+                <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+                    <label className='flex flex-col gap-1.5 text-sm font-medium text-black/70'>Client
+                        <input value={newProject.client} onChange={(e)=>{setNewProject({...newProject, client:e.target.value })}} type="text" placeholder='e.g. Ryan LLC' className={inputBase} />
+                    </label>
+                    <label className='flex flex-col gap-1.5 text-sm font-medium text-black/70'>Due date
+                        <input value={newProject.date} onChange={(e)=>{setNewProject({...newProject, date:e.target.value })}} type="date"  className={inputBase} />
+                    </label>
+                </div>
+                <label className='flex flex-col gap-1.5 text-sm font-medium text-black/70'>Milestones
+                    <input onKeyDown={(e:any)=>{e.key==="Enter" && handleMilestone(e.target.value)}} value={mileText} onChange={(e)=>{setMileText(e.target.value)}} type="text" placeholder='Type a milestone and press Enter...'  className={inputBase} />
+                </label>
+                <div className='flex min-h-14 flex-wrap gap-2 rounded-2xl border border-dashed border-black/15 bg-cream/40 bg-cream/50 p-3 text-sm text-black/55'>
                     {
                       milestones.length!=0? milestones.map((mile:any, index:any)=>{
-                        return <span onClick={()=>{handleRemoveMileStone(mile)}} key={index} className='flex items-center gap-1 bg-white p-1 w-[fit-content] cursor-pointer rounded-lg'><X size={16} /> {mile.title}</span>
+                        return <span onClick={()=>{handleRemoveMileStone(mile)}} key={index} className='inline-flex w-fit cursor-pointer items-center gap-1 rounded-xl bg-white px-2 py-1 text-sm font-medium text-black/70 ring-1 ring-black/10 transition-colors hover:text-red-600 hover:ring-red-200'><X size={14} /> {mile.title}</span>
                       }):"No Milestones"
                     }
-                  </CardContent>
-                </Card>
-            </CardContent>
-            <CardFooter className='flex flex-col md:flex-row gap-3'>
-                <button disabled={!isReady} onClick={handlenewProject} className='bg-emerald-700 disabled:bg-gray-100 disabled:text-emerald-700 transition duration-300 ease-in-out text-white w-full p-3 rounded-lg cursor-pointer'>Add New Project</button>
-                <button onClick={()=>{setShowCreateProjectModal(false)}} className='border border-emerald-700 text-emerald-700 w-full p-3 rounded-lg cursor-pointer'>Cancel</button>
-            </CardFooter>
-        </Card>
+                </div>
+            </div>
+            <div className='flex flex-col-reverse gap-2 border-t border-black/5 bg-cream/50 p-4 sm:flex-row sm:justify-end sm:px-6'>
+                <button onClick={()=>{setShowCreateProjectModal(false)}} className={btnSecondary}>Cancel</button>
+                <button disabled={!isReady} onClick={handlenewProject} className={btnPrimary}>Add New Project</button>
+            </div>
+        </div>
     </div>
   )
 }

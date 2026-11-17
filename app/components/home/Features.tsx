@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { motion } from "motion/react";
 import {
   ShoppingBag,
   Store,
@@ -8,159 +9,152 @@ import {
   Building2,
   ArrowRight,
   CheckCircle2,
-} from "lucide-react";
+} from "@/components/icons";
 
 const Features = () => {
   const features = [
     {
-      icon: <ShoppingBag className="w-6 h-6" />,
+      icon: <ShoppingBag className="w-5 h-5" />,
       title: "Shop Now",
       userType: "For Customers",
       description:
         "Browse thousands of products verified by escrow protection.",
       benefits: [
-        "Something something",
-        "Something something",
-        "Something something",
+        "100% purchase protection",
+        "Real-time order tracking",
+        "Easy returns & refunds",
       ],
-      accent: "text-emerald-400",
-      glow: "group-hover:shadow-emerald-500/20",
-      border: "group-hover:border-emerald-500/50",
-      bgGradient: "group-hover:bg-emerald-500/5",
-      buttonColor: "bg-emerald-500 hover:bg-emerald-600",
+      iconWrap: "bg-emerald-50 text-emerald-600 ring-emerald-100",
+      check: "text-emerald-500",
+      featured: true,
     },
     {
-      icon: <Store className="w-6 h-6" />,
+      icon: <Store className="w-5 h-5" />,
       title: "Become a Seller",
       userType: "For Store Owners",
       description: "Start your online business with our pro seller dashboard.",
       benefits: [
-        "Something something",
-        "Something something",
-        "Something something",
+        "Zero setup fees to start",
+        "Advanced analytics dashboard",
+        "Secure instant payouts",
       ],
-      accent: "text-amber-400",
-      glow: "group-hover:shadow-amber-500/20",
-      border: "group-hover:border-amber-500/50",
-      bgGradient: "group-hover:bg-amber-500/5",
-      buttonColor: "bg-amber-500 hover:bg-amber-600",
+      iconWrap: "bg-amber-50 text-amber-600 ring-amber-100",
+      check: "text-amber-500",
+      featured: false,
     },
     {
-      icon: <Truck className="w-6 h-6" />,
+      icon: <Truck className="w-5 h-5" />,
       title: "Join as Courier",
       userType: "For Couriers",
       description: "Earn money on your schedule by delivering packages nearby.",
       benefits: [
-        "Something something",
-        "Something something",
-        "Something something",
+        "Flexible working hours",
+        "AI-optimized delivery routes",
+        "Weekly instant payouts",
       ],
-      accent: "text-blue-400",
-      glow: "group-hover:shadow-blue-500/20",
-      border: "group-hover:border-blue-500/50",
-      bgGradient: "group-hover:bg-blue-500/5",
-      buttonColor: "bg-blue-600 hover:bg-blue-700",
+      iconWrap: "bg-sky-50 text-sky-600 ring-sky-100",
+      check: "text-sky-500",
+      featured: false,
     },
     {
-      icon: <Building2 className="w-6 h-6" />,
+      icon: <Building2 className="w-5 h-5" />,
       title: "Partner with Us",
       userType: "For Agencies",
       description:
         "Scale your logistics business by partnering with our platform.",
       benefits: [
-        "Something something",
-        "Something something",
-        "Something something",
+        "Bulk order management",
+        "Full API integration",
+        "Dedicated account support",
       ],
-      accent: "text-violet-400",
-      glow: "group-hover:shadow-violet-500/20",
-      border: "group-hover:border-violet-500/50",
-      bgGradient: "group-hover:bg-violet-500/5",
-      buttonColor: "bg-violet-600 hover:bg-violet-700",
+      iconWrap: "bg-violet-50 text-violet-600 ring-violet-100",
+      check: "text-violet-500",
+      featured: false,
     },
   ];
 
   return (
-    <section className="relative py-24 bg-zinc-950 overflow-hidden">
-      {/* Background Decor - Subtle Grid to match Hero */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
+    <section id="features" className="relative overflow-hidden bg-white py-16 md:py-24">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+      <div className="pointer-events-none absolute -top-40 right-0 h-80 w-80 rounded-full bg-emerald-100/60 blur-3xl" />
 
-      <div className="container mx-auto px-6 relative z-10">
+      <div className="page-container relative z-10">
         {/* Section Header */}
-        <div className="mb-20 max-w-2xl">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 font-mont tracking-tight">
-            Built for{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-600">
-              Everyone.
+        <div className="mb-12 flex flex-col gap-6 md:mb-16 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <span className="mb-4 inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-100">
+              One platform, four roles
             </span>
-          </h2>
-          <p className="text-lg text-zinc-400 font-noto leading-relaxed border-l-2 border-emerald-500/30 pl-6">
-            Whether you're buying, selling, delivering, or managing logistics,
+            <h2 className="font-mont text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl lg:text-5xl">
+              Built for <span className="text-emerald-600">Everyone.</span>
+            </h2>
+          </div>
+          <p className="max-w-md font-noto text-base leading-relaxed text-zinc-600 sm:text-lg">
+            Whether you&apos;re buying, selling, delivering, or managing logistics,
             Escro has the perfect, secure solution for you.
           </p>
         </div>
 
-        {/* Bento Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {/* Grid */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
           {features.map((feature, index) => (
-            <div
+            <motion.div
               key={index}
-              className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8 transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl ${feature.border} ${feature.glow}`}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.45, delay: index * 0.06 }}
+              className={`group relative flex flex-col rounded-2xl border p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl sm:p-7 ${
+                feature.featured
+                  ? "border-emerald-200 bg-gradient-to-b from-emerald-50/70 to-white shadow-sm hover:shadow-emerald-500/10"
+                  : "border-zinc-200 bg-white shadow-sm hover:border-zinc-300 hover:shadow-zinc-900/5"
+              }`}
             >
-              {/* Hover Gradient Overlay */}
-              <div
-                className={`absolute inset-0 opacity-0 transition-opacity duration-500 ${feature.bgGradient} group-hover:opacity-100`}
-              />
-
-              <div className="relative z-10">
-                {/* Header: User Type & Icon */}
-                <div className="flex justify-between items-start mb-6">
-                  <div
-                    className={`p-3 rounded-lg bg-zinc-950 border border-zinc-800 shadow-inner ${feature.accent}`}
-                  >
-                    {feature.icon}
-                  </div>
-                  <span
-                    className={`text-xs font-bold uppercase tracking-widest ${feature.accent} opacity-80`}
-                  >
-                    {feature.userType}
-                  </span>
+              <div className="mb-5 flex items-start justify-between gap-3">
+                <div
+                  className={`flex h-11 w-11 items-center justify-center rounded-xl ring-1 ${feature.iconWrap}`}
+                >
+                  {feature.icon}
                 </div>
-
-                {/* Title & Desc */}
-                <h3 className="text-2xl font-bold text-white mb-3 font-mont">
-                  {feature.title}
-                </h3>
-                <p className="text-zinc-400 text-sm leading-relaxed mb-6">
-                  {feature.description}
-                </p>
-
-                {/* Benefits List - Clean & Modern */}
-                <ul className="space-y-3 mb-8">
-                  {feature.benefits.map((benefit, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-center text-sm text-zinc-300"
-                    >
-                      <CheckCircle2
-                        className={`w-4 h-4 mr-3 ${feature.accent}`}
-                      />
-                      {benefit}
-                    </li>
-                  ))}
-                </ul>
+                <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-600">
+                  {feature.userType}
+                </span>
               </div>
 
-              {/* Action Area */}
-              <div className="relative z-10 mt-auto pt-6 border-t border-zinc-800/50">
+              <h3 className="mb-2 font-mont text-xl font-bold tracking-tight text-zinc-900">
+                {feature.title}
+              </h3>
+              <p className="mb-6 font-noto text-sm leading-relaxed text-zinc-600">
+                {feature.description}
+              </p>
+
+              <ul className="mb-7 space-y-2.5">
+                {feature.benefits.map((benefit, idx) => (
+                  <li
+                    key={idx}
+                    className="flex items-start gap-2.5 text-sm text-zinc-700"
+                  >
+                    <CheckCircle2
+                      className={`mt-0.5 h-4 w-4 shrink-0 ${feature.check}`}
+                    />
+                    {benefit}
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-auto">
                 <button
-                  className={`w-full py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-white transition-all duration-300 shadow-lg ${feature.buttonColor} active:scale-[0.98]`}
+                  className={`flex h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:ring-offset-2 active:scale-[0.98] ${
+                    feature.featured
+                      ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700"
+                      : "border border-zinc-200 bg-white text-zinc-900 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
+                  }`}
                 >
                   Get Started
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </button>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>

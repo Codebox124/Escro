@@ -8,7 +8,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Users,
-} from "lucide-react";
+} from "@/components/icons";
 
 interface StepTwoProps {
   selectedRole: string;

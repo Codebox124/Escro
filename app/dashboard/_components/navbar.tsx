@@ -1,12 +1,11 @@
 "use client";
 
 import {
-  IconMenu,
-  IconSearch,
-  IconShoppingBag,
+  IconLogout,
+  IconMenu2,
   IconShoppingCart,
   IconX,
-} from "@tabler/icons-react";
+} from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -16,172 +15,457 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetClose,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { usePathname } from "next/navigation";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { authService } from "@/services/auth";
+import { motion } from "motion/react";
+import { Logo } from "@/app/components/landing/Logo";
+import { useCart } from "./cart-context";
+import SearchBox from "./search-box";
 
-interface NavbarProps {
-  userName?: string;
-  userEmail?: string;
+const menuItemCls =
+  "h-10 cursor-pointer rounded-full px-3 font-medium text-black/70 focus:bg-cream focus:text-ink";
+
+interface User {
+  full_name?: string;
+  email?: string;
+  role?: 'customer' | 'seller' | 'admin';
 }
 
-const Navbar = ({
-  userName = "John Doe",
-  userEmail = "owner@escro.com",
-}: NavbarProps) => {
+const Navbar = () => {
+  const pathname = usePathname() ?? "";
+  const { user, loading } = useCurrentUser() as { user: User | null; loading: boolean };
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { count: cartCount } = useCart();
 
-  const navLinks = [
-    { href: "/dashboard/shop", label: "Shop" },
-    { href: "/dashboard/services", label: "Services" },
-    { href: "/dashboard/stores", label: "Stores" },
-    { href: "/dashboard/orders", label: "My Orders" },
-  ];
+  const handleLogout = async () => {
+    try {
+      // Call logout service (clears localStorage and cookies)
+      authService.logout();
+
+      // The authService.logout() already redirects to /login
+      // But you can also manually redirect if needed:
+      // router.push('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  // Navigation links based on user role
+  const getNavLinks = () => {
+    if (!user) return [];
+
+    const baseLinks = [
+      { href: "/dashboard/shop", label: "Shop" },
+      { href: "/dashboard/services", label: "Services" },
+    ];
+
+    // Add role-specific links
+    if (user.role === 'customer') {
+      return [
+        ...baseLinks,
+        { href: "/dashboard/stores", label: "Stores" },
+        { href: "/dashboard/orders", label: "My Orders" },
+      ];
+    } else if (user.role === 'seller') {
+      return [
+        ...baseLinks,
+        { href: "/mystore", label: "My Store" },
+        { href: "/mystore/products", label: "Products" },
+        { href: "/mystore/orders", label: "Orders" },
+      ];
+    } else if (user.role === 'admin') {
+      return [
+        { href: "/admin", label: "Dashboard" },
+        { href: "/admin/users", label: "Users" },
+        { href: "/admin/products", label: "Products" },
+        { href: "/admin/orders", label: "Orders" },
+      ];
+    }
+
+    return baseLinks;
+  };
+
+  const navLinks = getNavLinks();
+
+  const isActive = (href: string) =>
+    !!pathname && (pathname === href || pathname.startsWith(`${href}/`));
+
+  // Get user initials for avatar fallback
+  const getUserInitials = () => {
+    if (!user?.full_name) return 'U';
+    const names = user.full_name.split(' ');
+    if (names.length >= 2) {
+      return names[0][0].toUpperCase() + names[1][0].toUpperCase();
+    }
+    return user.full_name[0].toUpperCase();
+  };
+
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const avatar = (size: string) => (
+    <Avatar className={size}>
+      <AvatarImage
+        src={`https://api.dicebear.com/9.x/glass/svg?seed=${user?.full_name || 'User'}`}
+        alt={user?.full_name || 'User'}
+      />
+      <AvatarFallback className="bg-ink text-sm font-bold text-lime">
+        {getUserInitials()}
+      </AvatarFallback>
+    </Avatar>
+  );
+
+  // Show skeleton while loading
+  if (loading) {
+    return (
+      <header className="sticky top-0 z-50 px-3 pt-3 sm:px-6 sm:pt-4">
+        <nav className="mx-auto flex h-14 max-w-[96rem] items-center justify-between gap-4 rounded-full bg-white/70 pl-4 pr-2 ring-1 ring-black/5 backdrop-blur-md sm:h-16 sm:pl-6">
+          <Logo />
+          <div className="hidden h-10 w-full max-w-sm animate-pulse rounded-full bg-black/5 lg:block" />
+          <div className="flex items-center gap-2">
+            <div className="h-10 w-10 animate-pulse rounded-full bg-black/5" />
+            <div className="h-10 w-10 animate-pulse rounded-full bg-black/5" />
+          </div>
+        </nav>
+      </header>
+    );
+  }
 
   return (
-    <nav className="bg-emerald-50/20 border-b border-gray-200/30 backdrop-blur-md px-6 py-4 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-8">
+    <header className="sticky top-0 z-50 px-3 pt-3 sm:px-6 sm:pt-4">
+      <nav
+        className={`mx-auto flex h-14 max-w-[96rem] items-center justify-between gap-2 rounded-full pl-4 pr-2 transition-all duration-500 sm:h-16 sm:pl-6 md:gap-4 ${
+          scrolled
+            ? "bg-ink/90 text-white shadow-2xl shadow-black/20 backdrop-blur-xl"
+            : "bg-white/70 text-ink ring-1 ring-black/5 backdrop-blur-md"
+        }`}
+      >
         {/* Logo */}
-        <Link href="/dashboard" className="flex items-center gap-3">
-          <IconShoppingBag className="w-9 h-9 text-emerald-600" />
-          <span className="text-2xl font-bold text-emerald-600 ">ESCRO</span>
+        <Link
+          href="/"
+          aria-label="Escro home"
+          className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-dark/60"
+        >
+          <Logo dark={scrolled} />
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center flex-1 justify-center">
-          <ul className="flex items-center gap-8">
-            {navLinks.map((link) => (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  className="text-gray-700 hover:text-emerald-600 font-medium text-sm transition-colors duration-200"
-                >
-                  {link.label}
-                </Link>
-              </li>
-            ))}
+        <div className="hidden min-w-0 md:flex md:items-center">
+          <ul className="flex items-center gap-1">
+            {navLinks.map((link) => {
+              const active = isActive(link.href);
+              return (
+                <li key={link.href} className="relative">
+                  <Link
+                    href={link.href}
+                    className={`relative inline-flex h-10 items-center whitespace-nowrap rounded-full px-3.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-dark/60 lg:px-4 ${
+                      active
+                        ? scrolled
+                          ? "text-ink"
+                          : "text-white"
+                        : scrolled
+                        ? "text-white/70 hover:bg-white/10 hover:text-white"
+                        : "text-black/60 hover:bg-black/5 hover:text-black"
+                    }`}
+                  >
+                    {active && (
+                      <motion.span
+                        layoutId="buyer-nav-pill"
+                        className={`absolute inset-0 rounded-full ${scrolled ? "bg-lime" : "bg-ink"}`}
+                        transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                      />
+                    )}
+                    <span className="relative">{link.label}</span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </div>
 
-        {/* Right Section */}
-        <div className="flex items-center gap-2">
-          {/* Search Bar - Hidden on mobile */}
-          <div className="hidden lg:flex items-center">
-            <div className="relative">
-              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search products, stores..."
-                className="w-80 bg-white/80 border border-emerald-200 rounded-lg pl-10 pr-4 py-2.5 text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-              />
-            </div>
+        {/* Search Bar - Desktop */}
+        <div className="hidden flex-1 justify-end lg:flex">
+          <div className="relative w-full max-w-xs">
+            <Suspense fallback={null}>
+              <SearchBox dark={scrolled} />
+            </Suspense>
           </div>
+        </div>
 
-          {/* Cart */}
-          <button className="relative p-2 bg-emerald-500 rounded-md hover:bg-emerald-700 transition-colors">
-            <IconShoppingCart className="w-6 h-6 text-emerald-100" />
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-              3
-            </span>
-          </button>
+        {/* Right Section */}
+        <div className="flex shrink-0 items-center gap-1.5">
+          {/* Cart - Only show for customers */}
+          {user?.role === 'customer' && (
+            <Link
+              href="/dashboard/cart"
+              aria-label={cartCount > 0 ? `Cart, ${cartCount} items` : "Cart"}
+              className={`relative flex h-10 w-10 items-center justify-center rounded-full transition-transform hover:scale-[1.05] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-dark/60 sm:h-11 sm:w-11 ${
+                scrolled ? "bg-lime text-ink" : "bg-ink text-white"
+              }`}
+            >
+              <IconShoppingCart className="h-5 w-5" />
+              {cartCount > 0 && (
+                <span
+                  className={`absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 font-space text-[10px] font-bold ring-2 ${
+                    scrolled ? "bg-white text-ink ring-ink" : "bg-lime text-ink ring-white"
+                  }`}
+                >
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+          )}
 
           {/* User Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="focus:outline-none">
-                <Avatar className="w-10 h-10 ring-2 ring-transparent hover:ring-emerald-500 transition-all cursor-pointer rounded-md">
-                  <AvatarImage
-                    src={`https://api.dicebear.com/9.x/glass/svg?seed=${userName}`}
-                    alt={userName}
-                  />
-                  <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white font-semibold rounded-md">
-                    {userName.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+              <button
+                aria-label="Account menu"
+                className={`rounded-full ring-2 transition-all focus:outline-none focus-visible:ring-lime-dark ${
+                  scrolled ? "ring-white/15 hover:ring-lime" : "ring-black/5 hover:ring-ink/30"
+                }`}
+              >
+                {avatar("h-10 w-10 cursor-pointer sm:h-11 sm:w-11")}
               </button>
             </DropdownMenuTrigger>
 
             <DropdownMenuContent
               align="end"
-              className="w-64 mt-2 bg-white border border-gray-200 shadow-lg rounded-lg"
+              className="mt-2 w-64 rounded-3xl border-0 bg-white p-2 font-mont shadow-2xl shadow-black/10 ring-1 ring-black/5"
             >
-              <DropdownMenuLabel className="px-4 py-3">
-                <div className="space-y-1">
-                  <p className="font-semibold text-gray-900">{userName}</p>
-                  <p className="text-sm text-gray-500">{userEmail}</p>
+              <DropdownMenuLabel className="rounded-2xl bg-cream px-3 py-3">
+                <div className="space-y-0.5">
+                  <p className="truncate font-bold text-ink">{user?.full_name || 'User'}</p>
+                  <p className="truncate font-space text-[11px] font-normal text-black/50">{user?.email || ''}</p>
+                  {user?.role && (
+                    <span className="mt-2 inline-flex items-center rounded-full bg-lime px-2.5 py-0.5 font-space text-[10px] font-bold uppercase tracking-wider text-ink">
+                      {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                    </span>
+                  )}
                 </div>
               </DropdownMenuLabel>
 
-              <DropdownMenuSeparator className="bg-gray-200" />
+              <DropdownMenuSeparator className="my-2 bg-black/5" />
 
+              {/* Role-specific menu items */}
+              {user?.role === 'seller' && (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href="/mystore" className={menuItemCls}>
+                      My Store
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/mystore/settings" className={menuItemCls}>
+                      Store Settings
+                    </Link>
+                  </DropdownMenuItem>
+                </>
+              )}
+
+              {user?.role === 'customer' && (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/orders" className={menuItemCls}>
+                      My Orders
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/stores" className={menuItemCls}>
+                      Stores
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/services?tab=requests" className={menuItemCls}>
+                      My Service Requests
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard/cart" className={menuItemCls}>
+                      Cart
+                    </Link>
+                  </DropdownMenuItem>
+                </>
+              )}
+
+              {user?.role === 'admin' && (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin" className={menuItemCls}>
+                      Admin Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/settings" className={menuItemCls}>
+                      System Settings
+                    </Link>
+                  </DropdownMenuItem>
+                </>
+              )}
+
+              {/* Common menu items */}
               <DropdownMenuItem asChild>
-                <Link href="/mystore/profile" className="cursor-pointer">
+                <Link href="/profile" className={menuItemCls}>
                   Profile Settings
                 </Link>
               </DropdownMenuItem>
+
               <DropdownMenuItem asChild>
-                <Link href="/mystore/settings" className="cursor-pointer">
-                  Store Settings
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/billing" className="cursor-pointer">
-                  Billing & Plans
+                <Link href="/settings" className={menuItemCls}>
+                  Account Settings
                 </Link>
               </DropdownMenuItem>
 
-              <DropdownMenuSeparator className="bg-gray-200" />
+              <DropdownMenuSeparator className="my-2 bg-black/5" />
 
-              <DropdownMenuItem className="text-red-600 focus:bg-red-50 focus:text-red-700 font-medium">
-                <Link href="/api/auth/signout" className="w-full text-left">
-                  Sign Out
-                </Link>
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="h-10 cursor-pointer rounded-full px-3 font-semibold text-red-600 focus:bg-red-50 focus:text-red-700"
+              >
+                <IconLogout className="h-4 w-4" />
+                Sign Out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Mobile Menu Toggle */}
+          {/* Mobile Menu Toggle — replaced by the bottom navigation on small screens */}
           <button
+            hidden
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 bg-emerald-500 rounded-lg transition-colors"
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileMenuOpen}
+            className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-dark/60 md:hidden ${
+              scrolled ? "text-white hover:bg-white/10" : "text-ink hover:bg-black/5"
+            }`}
           >
             {mobileMenuOpen ? (
-              <IconX className="w-6 h-6 text-emerald-100" />
+              <IconX className="h-5 w-5" />
             ) : (
-              <IconMenu className="w-6 h-6 text-emerald-100" />
+              <IconMenu2 className="h-5 w-5" />
             )}
           </button>
         </div>
-      </div>
+      </nav>
 
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-lg">
-          <div className="px-6 py-6 space-y-4">
+      {/* Mobile Menu - full-screen ink panel */}
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent
+          side="right"
+          className="flex h-[100dvh] w-full max-w-none flex-col gap-0 border-0 bg-ink p-0 font-mont text-white sm:max-w-none md:hidden [&>button:last-child]:hidden"
+        >
+          <div className="flex h-[68px] shrink-0 items-center justify-between px-6 pt-3">
+            <SheetTitle className="sr-only">Navigation menu</SheetTitle>
+            <SheetDescription className="sr-only">
+              Browse Escro and manage your account
+            </SheetDescription>
+            <Logo dark />
+            <SheetClose
+              aria-label="Close menu"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-white/15"
+            >
+              <IconX className="h-5 w-5" />
+            </SheetClose>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-6 pb-4 pt-4">
+            {/* User Info in Mobile */}
+            <div className="flex items-center gap-3 rounded-3xl bg-white/[0.06] p-3 ring-1 ring-white/10">
+              {avatar("h-12 w-12")}
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-bold">{user?.full_name || 'User'}</p>
+                <p className="truncate font-space text-[11px] text-white/50">{user?.email || ''}</p>
+              </div>
+              {user?.role && (
+                <span className="shrink-0 rounded-full bg-lime px-2.5 py-1 font-space text-[10px] font-bold uppercase tracking-wider text-ink">
+                  {user.role}
+                </span>
+              )}
+            </div>
+
             {/* Mobile Search */}
-            <div className="relative">
-              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search..."
-                className="w-full bg-gray-50 border border-gray-300 rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+            <div className="relative mt-4">
+              <Suspense fallback={null}>
+                <SearchBox dark size="lg" placeholder="Search..." onNavigate={() => setMobileMenuOpen(false)} />
+              </Suspense>
             </div>
 
             {/* Mobile Nav Links */}
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="block py-3 text-gray-700 hover:text-emerald-600 font-medium text-lg border-b border-gray-100 last:border-0"
-              >
-                {link.label}
-              </Link>
-            ))}
+            <p className="eyebrow mt-8 font-space text-lime">Menu</p>
+            <ul className="mt-3 space-y-1">
+              {navLinks.map((link, i) => {
+                const active = isActive(link.href);
+                return (
+                  <motion.li
+                    key={link.href}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 + i * 0.05 }}
+                  >
+                    <Link
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-baseline gap-4 rounded-2xl px-3 py-2.5 text-3xl font-bold tracking-tight transition-colors ${
+                        active ? "bg-lime text-ink" : "text-white hover:bg-white/5"
+                      }`}
+                    >
+                      <span className={`font-space text-sm ${active ? "text-ink/60" : "text-lime"}`}>
+                        0{i + 1}
+                      </span>
+                      {link.label}
+                    </Link>
+                  </motion.li>
+                );
+              })}
+            </ul>
           </div>
-        </div>
-      )}
-    </nav>
+
+          {/* Mobile Footer */}
+          <div className="grid shrink-0 grid-cols-1 gap-3 p-6 pb-10">
+            {user?.role === 'customer' && (
+              <Link
+                href="/dashboard/cart"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex h-14 items-center justify-center gap-2 rounded-full bg-lime font-bold text-ink"
+              >
+                <IconShoppingCart className="h-5 w-5" />
+                Cart
+                {cartCount > 0 && (
+                  <span className="rounded-full bg-ink px-2 py-0.5 font-space text-[11px] text-lime">
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
+            )}
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                handleLogout();
+              }}
+              className="flex h-14 items-center justify-center gap-2 rounded-full border border-white/20 font-semibold text-white transition-colors hover:border-red-400 hover:text-red-300"
+            >
+              <IconLogout className="h-5 w-5" />
+              Sign Out
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </header>
   );
 };
 
