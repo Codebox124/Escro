@@ -8,6 +8,7 @@ const { protect } = require('../middleware/auth.middleware');
 const { toProduct, queryProducts, isMissingColumn } = require('../utils/catalog');
 const { closeUnassignedJob } = require('../utils/deliveries');
 const { getPlatformSettings } = require('../utils/platform');
+const { settleOrder } = require('../utils/wallet');
 
 const router = express.Router();
 router.use(protect);
@@ -612,6 +613,13 @@ router.post('/orders/:id/confirm', async (req, res) => {
       .from('escrow_transactions')
       .update({ status: 'released', released_at: now, updated_at: now })
       .eq('order_id', order.id);
+
+    // Split the released money: store share, courier fee, Escro commission.
+    try {
+      await settleOrder(order.id);
+    } catch (e) {
+      console.error('wallet settlement failed for order', order.id, e);
+    }
 
     // Sales counters (best effort)
     for (const item of order.items) {

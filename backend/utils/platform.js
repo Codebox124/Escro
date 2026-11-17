@@ -11,6 +11,7 @@ const DEFAULTS = {
   signupsPaused: false,
   defaultDeliveryFee: 1500, // NGN, used when an order has no shipping fee
   courierMaxActiveJobs: 5,
+  commissionRate: 5, // % of the items subtotal Escro keeps when an order is released
 };
 
 const CACHE_MS = 15 * 1000;
@@ -79,6 +80,16 @@ async function updatePlatformSettings(patch, adminId) {
       throw err;
     }
     clean.courierMaxActiveJobs = n;
+  }
+
+  if (patch.commissionRate !== undefined) {
+    const rate = Number(patch.commissionRate);
+    if (!Number.isFinite(rate) || rate < 0 || rate > 50) {
+      const err = new Error('Commission must be between 0% and 50%');
+      err.status = 400;
+      throw err;
+    }
+    clean.commissionRate = Math.round(rate * 100) / 100;
   }
 
   const { updatedAt, ...stored } = merge(current, clean);

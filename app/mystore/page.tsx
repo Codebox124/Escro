@@ -7,6 +7,7 @@ import { sellerService } from '@/services/seller';
 import StatCard from "./_components/stat-card";
 import SalesChart from "./_components/sales-chart";
 import QuickActions from "./_components/quick-actions";
+import WalletCard from "./_components/wallet-card";
 import { useMoney } from "./_components/currency";
 
 const Page = () => {
@@ -210,6 +211,9 @@ const Page = () => {
           />
         ))}
       </div>
+
+      {/* Earnings wallet */}
+      <WalletCard />
 
       {/* Sales Chart - Pass real data if available */}
       <SalesChart data={dashboardStats?.salesChartData} />

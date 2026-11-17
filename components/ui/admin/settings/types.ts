@@ -10,6 +10,8 @@ export interface PlatformSettings {
   /** NGN, used when an order has no shipping fee */
   defaultDeliveryFee: number
   courierMaxActiveJobs: number
+  /** % of the items subtotal Escro keeps when escrow is released (0–50) */
+  commissionRate: number
   updatedAt: string | null
 }
 
