@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm install --prefix backend --no-audit --no-fund && next build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "npm install --prefix backend --no-audit --no-fund"
