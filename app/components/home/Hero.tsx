@@ -124,7 +124,7 @@ const Hero = () => {
               className="mt-10 grid grid-cols-3 gap-3 border-t border-zinc-800/80 pt-8 sm:gap-6 lg:mt-12"
             >
               {[
-                { label: "Active Users", val: "10K+", icon: Users },
+                { label: "Active Users", val: "500+", icon: Users },
                 { label: "Escrow Secure", val: "100%", icon: ShieldCheck },
                 { label: "Trust Rating", val: "4.9/5", icon: TrendingUp },
               ].map((stat, i) => (
