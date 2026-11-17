@@ -1,12 +1,13 @@
 "use client"
 import React from 'react'
-import RecentMessages from './RecentMessages'
+import ProjectPipeline from './ProjectPipeline'
 import QuickActions from './QuickActions'
+import type { AgencyOverview } from '../agents/shared'
 
-function DashboardFourth() {
+function DashboardFourth({ projects, loading }: { projects: AgencyOverview['projects'] | null; loading: boolean }) {
   return (
-    <div className='flex flex-col md:flex-row gap-4'>
-        <RecentMessages />
+    <div className='grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-5'>
+        <ProjectPipeline projects={projects} loading={loading} />
         <QuickActions />
     </div>
   )

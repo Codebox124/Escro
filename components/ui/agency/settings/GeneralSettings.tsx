@@ -1,313 +1,317 @@
 "use client";
 
-import { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  CheckCircle2,
   IconBuilding,
-  IconMail,
-  IconPhone,
-  IconMapPin,
-  IconWorld,
-  IconClock,
-  IconCurrency,
-  IconUpload,
   IconCamera,
-} from "@tabler/icons-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  IconMail,
+  IconMapPin,
+  IconPhone,
+  IconUpload,
+  IconWorld,
+  Loader2,
+  X,
+} from "@/components/icons";
+import { agencyApi } from "@/services/agency";
+import { btnPrimary, btnSecondary, cardTitle, inputBase } from "../ui";
+import { AgencyMigrationNotice, AgencyProfile, LoadError, agencyError } from "../agents/shared";
 
-const GeneralSettings = () => {
-  const [storeLogo, setStoreLogo] = useState<string | null>(null);
+const MAX_LOGO_BYTES = 10 * 1024 * 1024;
+
+type TextField = "companyName" | "contactPerson" | "registration" | "description" | "phone" | "email" | "address" | "website";
+const TEXT_FIELDS: TextField[] = ["companyName", "contactPerson", "registration", "description", "phone", "email", "address", "website"];
+const EXTENDED: TextField[] = ["description", "phone", "email", "address", "website"];
+
+type FormState = Record<TextField, string> & { serviceAreas: string[] };
+
+function toForm(p: AgencyProfile): FormState {
+  return {
+    companyName: p.companyName || "",
+    contactPerson: p.contactPerson || "",
+    registration: p.registration || "",
+    description: p.description || "",
+    phone: p.phone || "",
+    email: p.email || "",
+    address: p.address || "",
+    website: p.website || "",
+    serviceAreas: Array.isArray(p.serviceAreas) ? p.serviceAreas : [],
+  };
+}
+
+function mergeAreas(current: string[], raw: string) {
+  const next = [...current];
+  for (const p of raw.split(",").map((s) => s.trim()).filter(Boolean)) {
+    if (!next.some((a) => a.toLowerCase() === p.toLowerCase())) next.push(p);
+  }
+  return next.slice(0, 50);
+}
+
+const labelCls = "flex flex-col gap-1.5 text-sm font-semibold text-black/70";
+const textareaCls = "min-h-[100px] w-full rounded-2xl border-0 bg-white px-4 py-3 text-sm text-ink ring-1 ring-black/10 placeholder:text-black/40 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:cursor-not-allowed disabled:bg-cream/60 disabled:text-black/40";
+const inputCls = `${inputBase} disabled:cursor-not-allowed disabled:bg-cream/60 disabled:text-black/40`;
+
+function SectionTitle({ icon: Icon, children }: { icon: React.ElementType; children: React.ReactNode }) {
+  return (
+    <h3 className={`mb-5 flex items-center gap-2.5 ${cardTitle}`}>
+      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-cream"><Icon className="h-4 w-4 text-ink" /></span>
+      {children}
+    </h3>
+  );
+}
+
+interface GeneralSettingsProps {
+  profile: AgencyProfile;
+  onSaved: (p: AgencyProfile) => void;
+}
+
+const GeneralSettings = ({ profile, onSaved }: GeneralSettingsProps) => {
+  const initial = useMemo(() => toForm(profile), [profile]);
+  const [form, setForm] = useState<FormState>(initial);
+  const [areaDraft, setAreaDraft] = useState("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const extended = profile.extendedProfile !== false;
+
+  // When the saved profile comes back from the server, re-base the form on it.
+  const [baseProfile, setBaseProfile] = useState(profile);
+  if (baseProfile !== profile) {
+    setBaseProfile(profile);
+    setForm(toForm(profile));
+  }
+
+  // Revoke object URLs when the preview changes / unmounts.
+  useEffect(() => () => { if (logoPreview) URL.revokeObjectURL(logoPreview); }, [logoPreview]);
+
+  const changed = useMemo(() => {
+    const out: Partial<FormState> = {};
+    for (const k of TEXT_FIELDS) if (form[k].trim() !== initial[k].trim()) out[k] = form[k].trim();
+    if (form.serviceAreas.join("|") !== initial.serviceAreas.join("|")) out.serviceAreas = form.serviceAreas;
+    return out;
+  }, [form, initial]);
+  const dirty = Object.keys(changed).length > 0 || !!logoFile;
+
+  function set<K extends keyof FormState>(key: K, value: FormState[K]) {
+    setForm((f) => ({ ...f, [key]: value }));
+    setSaved(false);
+    if (error) setError(null);
+  }
+
+  function addAreas(raw: string) {
+    if (!raw.trim()) return;
+    set("serviceAreas", mergeAreas(form.serviceAreas, raw));
+    setAreaDraft("");
+  }
+
+  function onAreaKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addAreas(areaDraft);
+    } else if (e.key === "Backspace" && !areaDraft && form.serviceAreas.length) {
+      set("serviceAreas", form.serviceAreas.slice(0, -1));
+    }
+  }
+
+  function onLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setLogoError("Choose an image file (PNG, JPG, WebP…)."); return; }
+    if (file.size > MAX_LOGO_BYTES) { setLogoError("Logo must be 10MB or smaller."); return; }
+    setLogoError(null);
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+    setSaved(false);
+  }
+
+  function cancel() {
+    setForm(initial);
+    setAreaDraft("");
+    setLogoFile(null);
+    setLogoPreview(null);
+    setLogoError(null);
+    setError(null);
+    setSaved(false);
+  }
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.companyName.trim()) { setError("Company name cannot be empty."); return; }
+    const payload: Record<string, string | string[]> = { ...changed } as Record<string, string | string[]>;
+    // Include an area that was typed but not yet turned into a chip.
+    if (areaDraft.trim()) {
+      const areas = mergeAreas(form.serviceAreas, areaDraft);
+      setForm((f) => ({ ...f, serviceAreas: areas }));
+      setAreaDraft("");
+      if (areas.join("|") !== initial.serviceAreas.join("|")) payload.serviceAreas = areas;
+    }
+    if (!Object.keys(payload).length && !logoFile) return;
+    if (!extended) for (const k of EXTENDED) delete payload[k];
+
+    setSaving(true);
+    setError(null);
+    try {
+      let body: FormData | Record<string, string | string[]> = payload;
+      if (logoFile && extended) {
+        const fd = new FormData();
+        for (const [k, v] of Object.entries(payload)) fd.append(k, Array.isArray(v) ? v.join(",") : v);
+        fd.append("logo", logoFile);
+        body = fd;
+      }
+      const fresh: AgencyProfile = await agencyApi.updateProfile(body);
+      setLogoFile(null);
+      setLogoPreview(null);
+      setSaved(true);
+      onSaved(fresh);
+    } catch (err) {
+      setError(agencyError(err, "Could not save your changes."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const logoSrc = logoPreview || profile.logo;
 
   return (
-    <div className="space-y-8">
-      {/* Store Branding */}
-      <div className="bg-white border border-emerald-500/30 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
-          <IconBuilding className="w-5 h-5 text-emerald-600" />
-          Agency Branding
-        </h3>
+    <form onSubmit={save} className="space-y-4 pb-2 sm:space-y-6">
+      {!extended && (
+        <AgencyMigrationNotice>Until then, description, contact details, website and logo can’t be edited.</AgencyMigrationNotice>
+      )}
 
-        <div className="grid gap-6">
-          {/* Store Logo */}
-          <div className="flex items-start gap-6">
+      {/* Branding */}
+      <div className="surface-card p-4 sm:p-6">
+        <SectionTitle icon={IconBuilding}>Agency profile</SectionTitle>
+        <div className="grid gap-5">
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-6">
             <div className="relative">
-              <div className="w-24 h-24 bg-emerald-500/20 rounded-md flex items-center justify-center overflow-hidden border-2 border-dashed border-emerald-300">
-                {storeLogo ? (
-                  <img
-                    src={storeLogo}
-                    alt="Agency logo"
-                    className="w-full h-full object-cover"
-                  />
+              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-ink/20 bg-cream">
+                {logoSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={logoSrc} alt="Agency logo" className="h-full w-full object-cover" />
                 ) : (
-                  <IconCamera className="w-8 h-8 text-emerald-400" />
+                  <IconCamera className="h-8 w-8 text-black/30" />
                 )}
               </div>
-              <label
-                htmlFor="logo-upload"
-                className="absolute -bottom-2 -right-2 p-2 bg-emerald-500 rounded-full cursor-pointer hover:bg-emerald-700 transition-colors"
-              >
-                <IconUpload className="w-4 h-4 text-white" />
-                <input
-                  type="file"
-                  id="logo-upload"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setStoreLogo(URL.createObjectURL(file));
-                    }
-                  }}
-                />
+              {logoPreview && (
+                <button type="button" aria-label="Discard new logo" onClick={() => { setLogoFile(null); setLogoPreview(null); }} className="absolute -right-2 -top-2 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white text-ink shadow ring-1 ring-black/10 hover:bg-cream">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-black/70">Agency logo</p>
+              <p className="mb-3 mt-1 text-sm text-black/55">Square image, up to 10MB. Shown to clients on your services.</p>
+              <label className={`${btnSecondary} h-10 ${extended ? "" : "pointer-events-none opacity-50"}`}>
+                <IconUpload className="h-4 w-4" />
+                {logoSrc ? "Change logo" : "Upload logo"}
+                <input type="file" accept="image/*" className="sr-only" disabled={!extended || saving} onChange={onLogo} />
               </label>
-            </div>
-            <div className="flex-1">
-              <Label className="text-sm font-semibold text-gray-700">
-                Agency Logo
-              </Label>
-              <p className="text-sm text-gray-500 mt-1 mb-3">
-                Upload a logo for your agency. Recommended size: 200x200px
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-emerald-600 border-emerald-500/50 rounded-sm hover:bg-emerald-50"
-              >
-                <IconUpload className="w-4 h-4 mr-2" />
-                Upload Logo
-              </Button>
+              {logoError && <p role="alert" className="mt-2 text-xs font-semibold text-red-600">{logoError}</p>}
             </div>
           </div>
 
-          {/* Store Name */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label
-                htmlFor="store-name"
-                className="text-sm font-semibold text-gray-700"
-              >
-                Agency Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="store-name"
-                placeholder="Your store name"
-                defaultValue="Nexorra Studio"
-                className="h-11 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label
-                htmlFor="tagline"
-                className="text-sm font-semibold text-gray-700"
-              >
-                Tagline
-              </Label>
-              <Input
-                id="tagline"
-                placeholder="Your store's tagline"
-                defaultValue="Quality Solutions for Modern Businesses"
-                className="h-11 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
-              />
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className={labelCls}>
+              <span>Company name <span className="text-red-500">*</span></span>
+              <input className={inputCls} value={form.companyName} onChange={(e) => set("companyName", e.target.value)} placeholder="Your agency name" maxLength={255} required />
+            </label>
+            <label className={labelCls}>
+              Contact person
+              <input className={inputCls} value={form.contactPerson} onChange={(e) => set("contactPerson", e.target.value)} placeholder="Who clients should ask for" />
+            </label>
+            <label className={labelCls}>
+              Registration number
+              <input className={inputCls} value={form.registration} onChange={(e) => set("registration", e.target.value)} placeholder="e.g. RC 1234567" />
+            </label>
+            <div className={labelCls}>
+              <label htmlFor="service-area-input">Service areas</label>
+              <div className="flex min-h-11 w-full flex-wrap items-center gap-1.5 rounded-2xl bg-white px-2 py-1.5 ring-1 ring-black/10 focus-within:ring-2 focus-within:ring-ink">
+                {form.serviceAreas.map((area) => (
+                  <span key={area} className="inline-flex items-center gap-1 rounded-full bg-cream py-1 pl-3 pr-1 text-xs font-bold text-ink">
+                    {area}
+                    <button type="button" aria-label={`Remove ${area}`} onClick={() => set("serviceAreas", form.serviceAreas.filter((a) => a !== area))} className="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-black/50 hover:bg-white hover:text-ink">
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  id="service-area-input"
+                  value={areaDraft}
+                  onChange={(e) => setAreaDraft(e.target.value)}
+                  onKeyDown={onAreaKey}
+                  onBlur={() => addAreas(areaDraft)}
+                  placeholder={form.serviceAreas.length ? "Add another…" : "e.g. Lagos, Ikeja, Lekki"}
+                  className="h-8 min-w-[8rem] flex-1 bg-transparent px-2 text-sm font-normal text-ink placeholder:text-black/40 focus:outline-none"
+                />
+              </div>
+              <span className="text-xs font-normal text-black/50">Press Enter or comma to add each area.</span>
             </div>
           </div>
 
-          {/* Store Description */}
-          <div className="space-y-2">
-            <Label
-              htmlFor="description"
-              className="text-sm font-semibold text-gray-700"
-            >
-              Agency Description
-            </Label>
-            <Textarea
-              id="description"
-              placeholder="Describe your agency..."
-              defaultValue="We build cool stuff"
-              className="min-h-[100px] border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
-            />
-            <p className="text-xs text-gray-500">
-              This description will appear on your agency&apos;s public page.
-            </p>
-          </div>
+          <label className={labelCls}>
+            Description
+            <textarea className={textareaCls} value={form.description} onChange={(e) => set("description", e.target.value)} disabled={!extended} placeholder="What does your agency do? Who do you serve?" />
+          </label>
         </div>
       </div>
 
-      {/* Contact Information */}
-      <div className="bg-white border border-emerald-500/30 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
-          <IconMail className="w-5 h-5 text-emerald-600" />
-          Contact Information
-        </h3>
-
+      {/* Contact */}
+      <div className="surface-card p-4 sm:p-6">
+        <SectionTitle icon={IconMail}>Contact information</SectionTitle>
         <div className="grid gap-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label
-                htmlFor="email"
-                className="text-sm font-semibold text-gray-700"
-              >
-                Business Email <span className="text-red-500">*</span>
-              </Label>
-              <div className="relative">
-                <IconMail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="contact@yourstore.com"
-                  defaultValue="contact@nexorra.com"
-                  className="h-11 pl-10 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label
-                htmlFor="phone"
-                className="text-sm font-semibold text-gray-700"
-              >
-                Phone Number
-              </Label>
-              <div className="relative">
-                <IconPhone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+1 (555) 123-4567"
-                  defaultValue="+1 (555) 987-6543"
-                  className="h-11 pl-10 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
-                />
-              </div>
-            </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className={labelCls}>
+              Business email
+              <span className="relative">
+                <IconMail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
+                <input type="email" className={`${inputCls} pl-10`} value={form.email} onChange={(e) => set("email", e.target.value)} disabled={!extended} placeholder="contact@youragency.com" />
+              </span>
+            </label>
+            <label className={labelCls}>
+              Phone number
+              <span className="relative">
+                <IconPhone className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
+                <input type="tel" className={`${inputCls} pl-10`} value={form.phone} onChange={(e) => set("phone", e.target.value)} disabled={!extended} placeholder="+234 800 000 0000" />
+              </span>
+            </label>
           </div>
-
-          <div className="space-y-2">
-            <Label
-              htmlFor="address"
-              className="text-sm font-semibold text-gray-700"
-            >
-              Business Address
-            </Label>
-            <div className="relative">
-              <IconMapPin className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-              <Textarea
-                id="address"
-                placeholder="Enter your business address"
-                defaultValue="123 Tech Street, Suite 456&#10;San Francisco, CA 94102&#10;United States"
-                className="min-h-[80px] pl-10 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
-              />
-            </div>
-          </div>
+          <label className={labelCls}>
+            Website
+            <span className="relative">
+              <IconWorld className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
+              <input type="url" className={`${inputCls} pl-10`} value={form.website} onChange={(e) => set("website", e.target.value)} disabled={!extended} placeholder="https://youragency.com" />
+            </span>
+          </label>
+          <label className={labelCls}>
+            Business address
+            <span className="relative">
+              <IconMapPin className="pointer-events-none absolute left-4 top-3.5 h-4 w-4 text-black/40" />
+              <textarea className={`${textareaCls} min-h-[80px] pl-10`} value={form.address} onChange={(e) => set("address", e.target.value)} disabled={!extended} placeholder="Street, city, state" />
+            </span>
+          </label>
         </div>
       </div>
 
-      {/* Regional Settings */}
-      <div className="bg-white border border-emerald-500/30 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
-          <IconWorld className="w-5 h-5 text-emerald-600" />
-          Regional Settings
-        </h3>
+      {error && <LoadError error={error} />}
 
-        <div className="grid md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold text-gray-700">
-              <div className="flex items-center gap-2 mb-2">
-                <IconClock className="w-4 h-4 text-gray-500" />
-                Timezone
-              </div>
-            </Label>
-            <Select defaultValue="america-los-angeles">
-              <SelectTrigger className="h-11 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500">
-                <SelectValue placeholder="Select timezone" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="america-new-york">
-                  (UTC-05:00) Eastern Time
-                </SelectItem>
-                <SelectItem value="america-chicago">
-                  (UTC-06:00) Central Time
-                </SelectItem>
-                <SelectItem value="america-denver">
-                  (UTC-07:00) Mountain Time
-                </SelectItem>
-                <SelectItem value="america-los-angeles">
-                  (UTC-08:00) Pacific Time
-                </SelectItem>
-                <SelectItem value="europe-london">
-                  (UTC+00:00) London
-                </SelectItem>
-                <SelectItem value="europe-paris">
-                  (UTC+01:00) Paris, Berlin
-                </SelectItem>
-                <SelectItem value="asia-tokyo">(UTC+09:00) Tokyo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold text-gray-700">
-              <div className="flex items-center gap-2 mb-2">
-                <IconWorld className="w-4 h-4 text-gray-500" />
-                Language
-              </div>
-            </Label>
-            <Select defaultValue="en">
-              <SelectTrigger className="h-11 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500">
-                <SelectValue placeholder="Select language" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="es">Spanish</SelectItem>
-                <SelectItem value="fr">French</SelectItem>
-                <SelectItem value="de">German</SelectItem>
-                <SelectItem value="zh">Chinese</SelectItem>
-                <SelectItem value="ja">Japanese</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold text-gray-700">
-              <div className="flex items-center gap-2 mb-2">
-                <IconCurrency className="w-4 h-4 text-gray-500" />
-                Currency
-              </div>
-            </Label>
-            <Select defaultValue="usd">
-              <SelectTrigger className="h-11 border-gray-300 focus:border-emerald-500 focus:ring-emerald-500">
-                <SelectValue placeholder="Select currency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="usd">USD ($)</SelectItem>
-                <SelectItem value="eur">EUR (€)</SelectItem>
-                <SelectItem value="gbp">GBP (£)</SelectItem>
-                <SelectItem value="jpy">JPY (¥)</SelectItem>
-                <SelectItem value="cad">CAD (C$)</SelectItem>
-                <SelectItem value="aud">AUD (A$)</SelectItem>
-                <SelectItem value="ngn">NGN (₦)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+      {/* Actions */}
+      <div className="sticky bottom-20 z-10 flex flex-col-reverse gap-2 rounded-3xl bg-cream/90 p-2 backdrop-blur sm:static sm:flex-row sm:items-center sm:justify-end sm:bg-transparent sm:p-0 sm:backdrop-blur-none lg:bottom-4">
+        {saved && !dirty && (
+          <span role="status" className="flex items-center justify-center gap-1.5 text-sm font-semibold text-emerald-700 sm:mr-auto">
+            <CheckCircle2 size={16} /> Changes saved
+          </span>
+        )}
+        <button type="button" onClick={cancel} disabled={!dirty || saving} className={btnSecondary}>Cancel</button>
+        <button type="submit" disabled={!dirty || saving} className={btnPrimary}>
+          {saving && <Loader2 size={16} className="animate-spin" />}
+          {saving ? "Saving…" : "Save changes"}
+        </button>
       </div>
-
-      {/* Save Button */}
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" className="border-gray-300">
-          Cancel
-        </Button>
-        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
-          Save Changes
-        </Button>
-      </div>
-    </div>
+    </form>
   );
 };
 

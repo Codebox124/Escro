@@ -1,75 +1,162 @@
 "use client";
 
 import React, { useState } from "react";
-import LoginForm from "../components/auth/LoginForm";
-import DemoCredsLogin from "../components/auth/DemoCredsLogin";
+import { useRouter } from "next/navigation";
+import { authService } from "../../services/auth";
+import { Mail, Lock, Eye, EyeOff, ShieldCheck, BadgeCheck, Zap } from "@/components/icons";
+import Link from "next/link";
+import AuthShell, {
+  AuthError,
+  AuthSubmitButton,
+  Highlight,
+  authIconClass,
+  authInputClass,
+  authLabelClass,
+  authLinkClass,
+} from "../components/auth/AuthShell";
+
+const ROLE_ROUTES: Record<string, string> = {
+  customer: "/dashboard",
+  seller: "/mystore",
+  courier: "/courier/",
+  agency: "/agency/",
+  admin: "/admin/",
+};
 
 export default function LoginPage() {
+  const router = useRouter();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [demoCredentials, setDemoCredentials] = useState<{
-    email: string;
-    password: string;
-  } | null>(null);
+  const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = async (data: {
-    email: string;
-    password: string;
-    rememberMe: boolean;
-  }) => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
+    setError("");
 
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Login data:", data);
+    try {
+      const { user } = await authService.login({ email, password });
 
-      // Better Auth  will be integrated here for middleware, ounlor
-      // Example:
-      // const { error } = await authClient.signIn.email({
-      //   email: data.email,
-      //   password: data.password,
-      //   rememberMe: data.rememberMe
-      // });
+      if (!user || !user.role) {
+        throw new Error("Invalid user role returned from server");
+      }
 
-      alert("Login successful! (This will be connected to Better Auth)");
+      const redirectTo = ROLE_ROUTES[user.role] ?? "/";
+      router.push(redirectTo);
+    } catch (err: any) {
+      setError(err.message || "Login failed. Please try again.");
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
-  const handleFillDemo = (demoData: { email: string; password: string }) => {
-    setDemoCredentials(demoData);
-  };
+  const highlights = [
+    { icon: ShieldCheck, label: "Escrow protection", desc: "Funds held until delivery is confirmed" },
+    { icon: BadgeCheck, label: "Verified sellers", desc: "Every store is vetted and trusted" },
+    { icon: Zap, label: "Fast payouts", desc: "Instant release upon confirmation" },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0F2F2F] via-[#1A4D4D] to-[#0A1F1F] flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <a href="/" className="inline-block">
-            <h1 className="text-4xl font-bold text-white font-mont hover:text-[#10B981] transition-colors">
-              Escro
-            </h1>
-          </a>
+    <AuthShell
+      eyebrow="Sign in"
+      title="Welcome back"
+      subtitle="Sign in to your account to continue."
+      heading={
+        <>
+          Trade with
+          <br />
+          <Highlight>confidence.</Highlight>
+        </>
+      }
+      description="Every transaction is protected by our escrow system. Your funds stay secure until delivery is confirmed."
+      aside={
+        <ul className="space-y-2">
+          {highlights.map((item) => (
+            <li key={item.label} className="flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-lime">
+                <item.icon className="h-4 w-4" />
+              </span>
+              <span className="min-w-0 text-sm">
+                <span className="font-semibold text-white">{item.label}</span>
+                <span className="text-white/50"> — {item.desc}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      }
+      footer={
+        <p className="text-sm text-black/55">
+          Don&apos;t have an account?{" "}
+          <Link href="/signup" className={authLinkClass}>
+            Create account
+          </Link>
+        </p>
+      }
+    >
+      {error && <AuthError message={error} />}
+
+      <form onSubmit={handleLogin} className="space-y-5">
+        <div>
+          <label htmlFor="email" className={authLabelClass}>
+            Email address
+          </label>
+          <div className="relative">
+            <Mail className={authIconClass} />
+            <input
+              type="email"
+              id="email"
+              placeholder="you@example.com"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={`${authInputClass} pr-4`}
+            />
+          </div>
         </div>
 
-        <DemoCredsLogin onFillDemo={handleFillDemo} />
-
-        <div className="bg-[#1F2937] rounded-2xl shadow-2xl p-8 border border-[#10B981]/20">
-          <LoginForm
-            onSubmit={handleLogin}
-            isLoading={isLoading}
-            initialCredentials={demoCredentials}
-          />
+        <div>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <label htmlFor="password" className="block text-sm font-semibold text-ink">
+              Password
+            </label>
+            <Link
+              href="/forgot-password"
+              className="rounded text-sm font-semibold text-black/55 transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <div className="relative">
+            <Lock className={authIconClass} />
+            <input
+              type={showPassword ? "text" : "password"}
+              id="password"
+              placeholder="Enter your password"
+              required
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={`${authInputClass} pr-12`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-black/40 transition-colors hover:bg-cream hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
 
-        <div className="text-center mt-6">
-          <a
-            href="/"
-            className="text-sm text-gray-400 hover:text-[#10B981]
-            transition-colors font-noto"
-          >
-            ← Back to Home
-          </a>
-        </div>
-      </div>
-    </div>
+        <AuthSubmitButton loading={isLoading} loadingText="Signing in..." className="mt-2">
+          Sign in
+        </AuthSubmitButton>
+      </form>
+    </AuthShell>
   );
 }

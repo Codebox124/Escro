@@ -1,86 +1,103 @@
 "use client"
-import { CircleStar, DollarSign, Motorbike, Signature, Store, Users } from 'lucide-react'
 import React from 'react'
-import { FaArrowTrendUp } from 'react-icons/fa6'
-import { GoProject } from 'react-icons/go'
-import { IoIosTrendingUp, IoMdCheckmarkCircleOutline } from 'react-icons/io'
-import { LuClock4 } from 'react-icons/lu'
-import { MdAttachMoney } from 'react-icons/md'
+import { ArrowRight, Box, CircleStar, Gavel, IconCurrencyNaira, Motorbike, ShieldCheck, Users } from '@/components/icons'
+import { formatMoney } from '@/lib/money'
+import StatCard from '../StatCard'
+import { useAdminContext } from '../AdminContext'
+import { AdminOverview, StatCardSkeleton, changeTone, formatChange } from './shared'
 
-function DashboardTop() {
+const grid = 'grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4'
+
+function DashboardTop({ data, loading }: { data: AdminOverview | null; loading: boolean }) {
+  const { setCurrentPage } = useAdminContext()
+
+  if (loading || !data) {
+    return (
+      <div className={grid}>
+        {Array.from({ length: 8 }).map((_, i) => <StatCardSkeleton key={i} />)}
+      </div>
+    )
+  }
+
+  const { users, orders, money, disputes, stores, products, couriers } = data
+  const openDisputes = disputes.open || 0
+
   return (
-    <div className='flex flex-col md:flex-row gap-5 flex-wrap'>
-      <div className='flex-1 w-full md:w-[23%] md:min-w-[250px] bg-white p-5 rounded-lg gap-5 flex flex-col cursor-pointer'>
-        <div className='flex items-center justify-between gap-3'>
-          <p className='text-gray-700'>Total Users</p>
-          <span className='text-xl bg-green-300/50 w-[40px] h-[40px] flex items-center justify-center text-green-900 rounded-lg'><Users size={16} /></span>
-        </div>
-        <h1 className='font-space text-3xl font-bold'>69</h1>
-        <div className='flex items-center justify-between gap-3'>
-          <span className='flex items-center gap-3 bg-green-300/50 w-[fit-content] p-1 px-2 rounded-full text-green-900 font-bold'><FaArrowTrendUp />+234</span>
-          <span className='text-gray-700'>This week</span>
-        </div>
-      </div>
+    <div className={grid}>
+      <StatCard
+        label='Money in escrow'
+        value={formatMoney(money.escrowHeld, 'ngn', { compact: money.escrowHeld >= 1e7 })}
+        icon={ShieldCheck}
+        period={money.escrowDisputed ? `${formatMoney(money.escrowDisputed, 'ngn', { compact: true })} disputed` : 'Held for open orders'}
+        variant='ink'
+      />
+      <StatCard
+        label='Gross merchandise value'
+        value={formatMoney(money.gmv, 'ngn', { compact: money.gmv >= 1e7 })}
+        icon={IconCurrencyNaira}
+        period={`${formatMoney(money.released, 'ngn', { compact: true })} released to sellers`}
+      />
+      <StatCard
+        label='Total users'
+        value={users.total.toLocaleString()}
+        icon={Users}
+        delta={formatChange(users.change)}
+        period={`${users.newThisWeek.toLocaleString()} new this week`}
+        tone={changeTone(users.change)}
+      />
+      <StatCard
+        label='Orders'
+        value={orders.total.toLocaleString()}
+        icon={CircleStar}
+        delta={formatChange(orders.change)}
+        period={`${orders.thisWeek.toLocaleString()} this week`}
+        tone={changeTone(orders.change)}
+      />
 
-      <div className='flex-1 w-full md:w-[23%] md:min-w-[250px] bg-white p-5 rounded-lg gap-5 flex flex-col cursor-pointer'>
-        <div className='flex items-center justify-between gap-3'>
-          <p className='text-gray-700'>Total Stores</p>
-          <span className='text-xl bg-green-300/50 w-[40px] h-[40px] flex items-center justify-center text-green-900 rounded-lg'><Store size={16} /></span>
+      <button
+        type='button'
+        onClick={() => setCurrentPage('Disputes')}
+        aria-label={`Open disputes: ${openDisputes}. Review disputes`}
+        className='group min-w-0 cursor-pointer rounded-3xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-dark/60'
+      >
+        <div className='pointer-events-none h-full [&>div]:h-full'>
+          <StatCard
+            label='Open disputes'
+            value={openDisputes.toLocaleString()}
+            icon={Gavel}
+            tone={openDisputes > 0 ? 'amber' : 'emerald'}
+            period={`${disputes.total.toLocaleString()} total · Review →`}
+            variant={openDisputes > 0 ? 'lime' : 'default'}
+          />
         </div>
-        <h1 className='font-space text-3xl font-bold'>28</h1>
-        <div className='flex items-center justify-between gap-3'>
-          <span className='flex items-center gap-3 bg-green-300/50 w-[fit-content] p-1 px-2 rounded-full text-green-900 font-bold'><FaArrowTrendUp />+10</span>
-          <span className='text-gray-700'>This Month</span>
-        </div>
-      </div>
+      </button>
 
-      <div className='flex-1 w-full md:w-[23%] md:min-w-[250px] bg-white p-5 rounded-lg gap-5 flex flex-col cursor-pointer'>
-        <div className='flex items-center justify-between gap-3'>
-          <p className='text-gray-700'>Total Orders</p>
-          <span className='text-xl bg-green-300/50 w-[40px] h-[40px] flex items-center justify-center text-green-900 rounded-lg'><CircleStar size={16} /></span>
-        </div>
-        <h1 className='font-space text-3xl font-bold'>156</h1>
-        <div className='flex items-center justify-between gap-3'>
-          <span className='flex items-center gap-3 bg-green-300/50 w-[fit-content] p-1 px-2 rounded-full text-green-900 font-bold'><FaArrowTrendUp />+23</span>
-          <span className='text-gray-700'>This week</span>
-        </div>
-      </div>
-
-      <div className='flex-1 w-full md:w-[23%] md:min-w-[250px] bg-white p-5 rounded-lg gap-5 flex flex-col cursor-pointer'>
-        <div className='flex items-center justify-between gap-3'>
-          <p className='text-gray-700'>Platform Revenue</p>
-          <span className='text-xl bg-green-300/50 w-[40px] h-[40px] flex items-center justify-center text-green-900 rounded-lg'><DollarSign size={16} /></span>
-        </div>
-        <h1 className='font-space text-3xl font-bold'>$45,230</h1>
-        <div className='flex items-center justify-between gap-3'>
-          <span className='flex items-center gap-3 bg-green-300/50 w-[fit-content] p-1 px-2 rounded-full text-green-900 font-bold'><FaArrowTrendUp />+19%</span>
-          <span className='text-gray-700'>This month</span>
-        </div>
-      </div>
-      
-      <div className='flex-1 w-full md:w-[23%] md:min-w-[250px] bg-white p-5 rounded-lg gap-5 flex flex-col cursor-pointer'>
-        <div className='flex items-center justify-between gap-3'>
-          <p className='text-gray-700'>Active Couriers</p>
-          <span className='text-xl bg-green-300/50 w-[40px] h-[40px] flex items-center justify-center text-green-900 rounded-lg'><Motorbike size={16} /></span>
-        </div>
-        <h1 className='font-space text-3xl font-bold'>28</h1>
-        <div className='flex items-center justify-between gap-3'>
-          <span className='flex items-center gap-3 bg-green-300/50 w-[fit-content] p-1 px-2 rounded-full text-green-900 font-bold'><FaArrowTrendUp />+5</span>
-          <span className='text-gray-700'>This month</span>
-        </div>
-      </div>
-
-      <div className='flex-1 w-full md:w-[23%] md:min-w-[250px] bg-white p-5 rounded-lg gap-5 flex flex-col cursor-pointer'>
-        <div className='flex items-center justify-between gap-3'>
-          <p className='text-gray-700'>Pending Approvals</p>
-          <span className='text-xl bg-green-300/50 w-[40px] h-[40px] flex items-center justify-center text-green-900 rounded-lg'><Signature size={16} /></span>
-        </div>
-        <h1 className='font-space text-3xl font-bold'>28</h1>
-        <div className='flex items-center justify-between gap-3'>
-          <span className='flex items-center gap-3 bg-green-300/50 w-[fit-content] p-1 px-2 rounded-full text-green-900 font-bold'><FaArrowTrendUp />+5</span>
-          <span className='text-gray-700'>This month</span>
-        </div>
-      </div>
+      <StatCard
+        label='Stores / products'
+        value={`${stores.total.toLocaleString()} / ${products.total.toLocaleString()}`}
+        icon={Box}
+        period={`${stores.verified.toLocaleString()} verified stores · ${products.active.toLocaleString()} active products`}
+      />
+      <StatCard
+        label='Couriers online'
+        value={`${couriers.online.toLocaleString()} / ${couriers.total.toLocaleString()}`}
+        icon={Motorbike}
+        period={couriers.total ? `${Math.round((couriers.online / couriers.total) * 100)}% available now` : 'No couriers yet'}
+        tone='sky'
+      />
+      <button
+        type='button'
+        onClick={() => setCurrentPage('Finance')}
+        className='surface-card card-hover group flex min-w-0 cursor-pointer flex-col justify-between gap-5 p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-dark/60 sm:p-6'
+      >
+        <p className='text-sm font-semibold text-black/50'>Refunded to buyers</p>
+        <p className='truncate font-space text-3xl font-bold tracking-tight text-ink sm:text-4xl'>
+          {formatMoney(money.refunded, 'ngn', { compact: money.refunded >= 1e7 })}
+        </p>
+        <span className='inline-flex items-center gap-1.5 text-xs font-bold text-ink'>
+          View finance <ArrowRight size={12} className='transition-transform group-hover:translate-x-0.5' />
+        </span>
+      </button>
     </div>
   )
 }

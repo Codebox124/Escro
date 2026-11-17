@@ -1,184 +1,169 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   IconDeviceLaptop,
+  IconDeviceMobile,
   IconShirt,
   IconSofa,
   IconBarbell,
   IconBook,
   IconDeviceGamepad2,
+  IconToolsKitchen2,
   IconSparkles,
   IconArrowRight,
-  IconFlame,
-} from "@tabler/icons-react";
-import { Button } from "@/components/ui/button";
+  IconArrowUpRight,
+  IconLayoutGrid,
+  IconTag,
+  IconCamera,
+  IconGift,
+  Car,
+  IconPalette,
+} from "@/components/icons";
+import { shopService } from "@/services/shop";
+import { errorMessage, type ShopCategory } from "./featured-goods";
 
-interface Category {
-  id: string;
-  name: string;
-  icon: React.ElementType;
-  itemCount: number;
-  color: string;
-  bg: string;
-}
+type IconType = React.ComponentType<{ className?: string }>;
 
-const categories: Category[] = [
-  {
-    id: "electronics",
-    name: "Electronics",
-    icon: IconDeviceLaptop,
-    itemCount: 2453,
-    color: "text-blue-600",
-    bg: "bg-blue-200",
-  },
-  {
-    id: "fashion",
-    name: "Fashion",
-    icon: IconShirt,
-    itemCount: 5621,
-    color: "text-pink-600",
-    bg: "bg-pink-200",
-  },
-  {
-    id: "home",
-    name: "Home & Living",
-    icon: IconSofa,
-    itemCount: 1892,
-    color: "text-amber-600",
-    bg: "bg-amber-200",
-  },
-  {
-    id: "sports",
-    name: "Sports",
-    icon: IconBarbell,
-    itemCount: 923,
-    color: "text-emerald-600",
-    bg: "bg-emerald-200",
-  },
-  {
-    id: "books",
-    name: "Books",
-    icon: IconBook,
-    itemCount: 3412,
-    color: "text-violet-600",
-    bg: "bg-violet-200",
-  },
-  {
-    id: "gaming",
-    name: "Gaming",
-    icon: IconDeviceGamepad2,
-    itemCount: 756,
-    color: "text-red-600",
-    bg: "bg-red-200",
-  },
+/** Best-effort icon for a category by keywords in its slug/name. */
+const ICON_RULES: [RegExp, IconType][] = [
+  [/phone|mobile|tablet/, IconDeviceMobile],
+  [/electr|laptop|computer|tech|gadget/, IconDeviceLaptop],
+  [/fashion|cloth|apparel|wear|shoe|footwear/, IconShirt],
+  [/home|furniture|living|decor/, IconSofa],
+  [/sport|fitness|gym|outdoor/, IconBarbell],
+  [/book|station/, IconBook],
+  [/gam|toy/, IconDeviceGamepad2],
+  [/food|grocer|kitchen|drink/, IconToolsKitchen2],
+  [/camera|photo/, IconCamera],
+  [/gift|craft/, IconGift],
+  [/auto|car|vehicle/, Car],
+  [/beauty|art|cosmetic|health/, IconPalette],
 ];
 
+function iconFor(c: ShopCategory): IconType {
+  const key = `${c.slug} ${c.name}`.toLowerCase();
+  return ICON_RULES.find(([re]) => re.test(key))?.[1] ?? IconTag;
+}
+
+const chipCls =
+  "group inline-flex h-11 shrink-0 snap-start items-center gap-2 rounded-full bg-white pl-1.5 pr-4 text-sm font-semibold text-ink ring-1 ring-black/5 transition-all hover:ring-ink/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-dark/60";
+const iconCls =
+  "flex h-8 w-8 items-center justify-center rounded-full bg-cream text-ink transition-colors group-hover:bg-lime";
+
+type State = { key: number; categories: ShopCategory[]; error: string | null };
+
 const Categories = () => {
+  const [attempt, setAttempt] = useState(0);
+  const [state, setState] = useState<State>({ key: -1, categories: [], error: null });
+
+  useEffect(() => {
+    let cancelled = false;
+    shopService
+      .getCategories()
+      .then((res: { categories?: ShopCategory[] }) => {
+        if (!cancelled) setState({ key: attempt, categories: res?.categories ?? [], error: null });
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setState({ key: attempt, categories: [], error: errorMessage(e, "Couldn't load categories") });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [attempt]);
+
+  const loading = state.key !== attempt;
+  const categories = state.categories.filter((c) => (c.count ?? 0) > 0);
+
   return (
-    <section className=" py-8">
-      {/* Section Header */}
-      <div className="flex items-center justify-between mb-8 flex-col md:flex-row gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <h2 className="text-2xl font-bold  font-noto tracking-tight text-black">
-              Explore Categories
-            </h2>
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-              <IconFlame className="w-4 h-4 text-emerald-400" />
-              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wide">
-                Hot
-              </span>
-            </div>
-          </div>
-          <p className="text-gray-400 text-sm font-mont">
-            Explore our curated collection of product categories
-          </p>
+    <section className="pt-10 md:pt-12">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-4 sm:mb-6">
+        <div className="min-w-0">
+          <p className="eyebrow font-space text-emerald-700">Browse</p>
+          <h2 className="mt-2 text-2xl font-extrabold tracking-[-0.03em] text-ink sm:text-3xl">
+            Explore categories
+          </h2>
+          <p className="mt-1 text-sm text-black/55">Jump straight to what you&apos;re looking for</p>
         </div>
-        <Button className="group md:flex hidden  items-center gap-2 px-5 py-2.5 bg-emerald-500/10 hover:bg-emerald-500 border border-emerald-500/30 hover:border-emerald-500 rounded-md text-emerald-400 hover:text-white text-sm font-semibold transition-all duration-300">
-          View All
-          <IconArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-        </Button>
+        <Link
+          href="/dashboard/shop"
+          className="group inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border-2 border-ink/15 px-5 text-sm font-semibold text-ink transition-colors hover:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-dark/60"
+        >
+          View all
+          <IconArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+        </Link>
       </div>
 
-      {/* Categories Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        {categories.map((category) => {
-          const Icon = category.icon;
-          return (
-            <div
-              key={category.id}
-              className={`
-                group relative overflow-hidden rounded-lg cursor-pointer
-                ${category.bg}
-                 transition-all duration-500 ease-out
-               
-              `}
+      {/* Category chips: horizontally scrollable on phones, wrap from sm */}
+      <div className="-mx-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+        {loading ? (
+          [1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-11 w-28 shrink-0 animate-pulse rounded-full bg-black/5 sm:w-32" />
+          ))
+        ) : state.error ? (
+          <p className="flex items-center gap-3 text-sm text-black/55">
+            {state.error}.
+            <button
+              type="button"
+              onClick={() => setAttempt((a) => a + 1)}
+              className="font-semibold text-ink underline underline-offset-4 hover:no-underline"
             >
-              {/* Background Glow Effect */}
-              <div
-                className={`
-                  absolute inset-0 opacity-0 group-hover:opacity-100
-                 ${category.bg}
-                  blur-xl transition-opacity duration-500
-                `}
-              />
-
-              {/* Card Content */}
-              <div className="relative z-10 p-5 flex flex-col items-center text-center">
-                {/* Icon Container */}
-                <div
-                  className={`
-                    relative 
-                  `}
+              Retry
+            </button>
+          </p>
+        ) : (
+          <>
+            <Link href="/dashboard/shop" className={`${chipCls} bg-ink! text-white! shadow-lg shadow-black/10`}>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-lime text-ink">
+                <IconLayoutGrid className="h-4 w-4" />
+              </span>
+              All products
+            </Link>
+            {categories.map((category) => {
+              const Icon = iconFor(category);
+              return (
+                <Link
+                  key={category.id}
+                  href={`/dashboard/shop?category=${encodeURIComponent(category.slug)}`}
+                  className={chipCls}
                 >
-                  <Icon
-                    className={`w-10 h-10 ${category.color} transition-all duration-300`}
-                    strokeWidth={1}
-                  />
-
-                  {/* Pulse Animation on Hover */}
-                </div>
-
-                {/* Category Name */}
-                <h3 className="text-sm font-semibold text-gray-900 mb-1.5 font-mont group-hover:text-800 transition-colors duration-300">
-                  {category.name}
-                </h3>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div className=" mt-8">
-        <Button className="group flex md:hidden w-full items-center gap-2 px-5 py-2.5 bg-emerald-500/10 hover:bg-emerald-500 border border-emerald-500/30 hover:border-emerald-500 rounded-md text-emerald-400 hover:text-white text-sm font-semibold transition-all duration-300">
-          View All
-          <IconArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-        </Button>
+                  <span className={iconCls}>
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span className="whitespace-nowrap">{category.name}</span>
+                  <span className="font-space text-[11px] font-normal text-black/40">
+                    {category.count.toLocaleString()}
+                  </span>
+                </Link>
+              );
+            })}
+          </>
+        )}
       </div>
 
-      {/* Featured Categories Banner */}
-      <div className="mt-8 relative overflow-hidden rounded-lg bg-linear-to-r from-emerald-600/40 via-teal-600/20 to-emerald-600/20 border border-emerald-500/20 p-6">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* New arrivals banner */}
+      <div className="relative mt-6 overflow-hidden rounded-3xl bg-lime p-5 text-ink sm:p-6">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-white/30 blur-2xl" />
+        <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-md">
-              <IconSparkles className="w-6 h-6 text-emerald-600" />
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-ink text-lime">
+              <IconSparkles className="h-6 w-6" />
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-emerald-800 font-noto">
-                Discover New Arrivals
-              </h3>
-              <p className="text-sm text-gray-600 font-mont">
-                Fresh products added daily across all categories
-              </p>
+            <div className="min-w-0">
+              <h3 className="text-lg font-extrabold tracking-tight sm:text-xl">Discover new arrivals</h3>
+              <p className="text-sm text-ink/65">See the most recently listed products first</p>
             </div>
           </div>
-          <Button className="group flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 rounded-md text-white text-sm font-semibold transition-all duration-300  hover:shadow-emerald-500/40">
-            Explore New Arrivals
-            <IconArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-          </Button>
+          <Link
+            href="/dashboard/shop?sort=newest"
+            className="group inline-flex h-12 w-full items-center justify-between gap-2 rounded-full bg-ink pl-5 pr-1.5 text-sm font-semibold text-white transition-colors hover:bg-ink-soft sm:w-auto"
+          >
+            Explore new arrivals
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-lime text-ink transition-transform duration-300 group-hover:rotate-45">
+              <IconArrowUpRight className="h-4 w-4" />
+            </span>
+          </Link>
         </div>
       </div>
     </section>

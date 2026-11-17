@@ -12,7 +12,7 @@ import {
   ChevronRight,
   ScrollText,
   Loader2,
-} from "lucide-react";
+} from "@/components/icons";
 
 interface StepFourProps {
   formData: any;

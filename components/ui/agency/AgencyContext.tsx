@@ -2,12 +2,10 @@
 
 import { usePathname } from "next/navigation"
 import {createContext, useContext, useState, ReactNode, useEffect} from "react"
-import SERVICES from "@/components/ui/agency/data/services.json"
 import PROJECTS from "@/components/ui/agency/data/projects.json"
 import USERINFO from "@/components/ui/agency/data/userInfo.json"
 import CONVERSATIONS from "@/components/ui/agency/data/conversations.json"
 import USERS from "@/components/ui/agency/data/users.json"
-import AGENTS from "@/components/ui/agency/data/agents.json"
 
 interface Props{
     children: ReactNode
@@ -17,30 +15,30 @@ const AgencyContext = createContext<any>(null)
 
 export const AgencyContextProvider = ({children}:Props) =>{
 
-    const [services, setServices]= useState(SERVICES)
+    // Real services are loaded per-component via servicesService (see dashboard/Services.tsx).
+    // Kept as an empty array so legacy consumers destructuring `services` keep working.
+    const [services, setServices]= useState<unknown[]>([])
     const [projects, setProjects] = useState<any>()
     const [minimize, setMinimize] = useState(true)
-    const [showAgentInfo, setShowAgentInfo] = useState(false)
-    const [selectedAgent, setSelectedAgent] = useState(null)
     const [selectedProject, setSelectedProject] = useState(null)
     const [currentPage, setCurrentPage] = useState("")
     const [showNotifications, setShowNotifications] = useState(false)
      useEffect(() => {
        //projects
-        
+
         calculateProgress(PROJECTS)
-        
+
 
     //currentpage
-    const gotten = localStorage.getItem("agency-current-page")
-    if (gotten) {
-      setCurrentPage(JSON.parse(gotten))
-    }else{
-        setCurrentPage("Dashboard")
-    }
+    // Restore the last page only if it still exists — an empty/stale saved value
+    // used to leave the screen blank on first login until a menu item was clicked.
+    const VALID_PAGES = ["Dashboard", "Agents", "Projects", "Messages", "Settings"]
+    let saved = ""
+    try { saved = JSON.parse(localStorage.getItem("agency-current-page") || '""') } catch { saved = "" }
+    setCurrentPage(VALID_PAGES.includes(saved) ? saved : "Dashboard")
   }, [])
     useEffect(()=>{
-        localStorage.setItem("agency-current-page", JSON.stringify(currentPage))
+        if (currentPage) localStorage.setItem("agency-current-page", JSON.stringify(currentPage))
     }, [currentPage])
 
     function calculateProgress(projs:any){
@@ -59,9 +57,6 @@ export const AgencyContextProvider = ({children}:Props) =>{
     const [conversations, setConversations] = useState(CONVERSATIONS)
     const [isSearching, setIsSearching] = useState(false)
     const [users, setUsers] = useState(USERS)
-    const [agents, setAgents] = useState(AGENTS)
-    const [agentsTableSearchResults, setAgentsTableSearchResults] = useState([])
-   const [isSearchingAgentsTable, setIsSearchingAgentsTable] = useState(false)
    const [projectsSearchResults, setprojectsSearchResults] = useState([])
    const [isSearchingProjects, setIsSearchingProjects] = useState(false)
    const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
@@ -99,16 +94,6 @@ export const AgencyContextProvider = ({children}:Props) =>{
         setIsSearching,
         users,
         setUsers,
-        agents,
-        setAgents,
-        agentsTableSearchResults,
-        setAgentsTableSearchResults,
-        isSearchingAgentsTable, 
-        setIsSearchingAgentsTable,
-        showAgentInfo,  
-        setShowAgentInfo,
-        selectedAgent,
-        setSelectedAgent,
         isSearchingProjects,
         setIsSearchingProjects,
         projectsSearchResults,

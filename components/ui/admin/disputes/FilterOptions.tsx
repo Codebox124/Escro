@@ -1,125 +1,72 @@
 "use client"
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { IconAdjustmentsHorizontal, IconSearch } from '@tabler/icons-react'
-import { useAdminContext } from '../AdminContext';
+import { IconSearch, X } from '@/components/icons'
+import { filterBar, searchInput } from '../ui';
+import { DisputeTab } from './types';
 
+interface FilterOptionsProps {
+  tab: DisputeTab
+  onTabChange: (tab: DisputeTab) => void
+  counts: Record<DisputeTab, number>
+  loading?: boolean
+  search: string
+  onSearchChange: (value: string) => void
+}
 
-function FilterOptions() {
-    const {
-      disputes,
-      setDisputesSearchResults,
-      isSearchingDisputes,
-      setIsSearchingDisputes
-    } = useAdminContext()
+const TABS: { value: DisputeTab; label: string }[] = [
+  { value: "open", label: "Open" },
+  { value: "resolved", label: "Resolved" },
+  { value: "rejected", label: "Rejected" },
+  { value: "all", label: "All" },
+]
 
-    const [disputesFilterValue, setdisputesFilterValue] = useState("")
-      
-    function handleFilterDisputes(value:string){
-        setIsSearchingDisputes(true)
-       const newDisputes = disputes.filter((dispute:any)=>{
-                if(dispute.status.toLowerCase() === value.toLowerCase()){
-                    return dispute
-                }
-            })
-          setDisputesSearchResults(newDisputes)
-    }
-
-    function handleSearch(value:string){
-        setIsSearchingDisputes(true)
-        //let newdisputes
-        /*if(!isFilteringdisputes){
-          newdisputes = disputes.filter((agent:any)=>{
-            if(agent.name.toLowerCase().includes(value.toLowerCase())){
-                return agent
-            }
-        })
-      }else{
-        newdisputes = disputesSearchResults.filter((agent:any)=>{
-            if(agent.name.toLowerCase().includes(value.toLowerCase())){
-                return agent
-            }
-        })
-      }*/
-    const newdisputes = disputes.filter((dispute:any)=>{
-            if(dispute.disputeId.toLowerCase().includes(value.toLowerCase())){
-                return dispute
-            }
-        })
-        setDisputesSearchResults(newdisputes)
-  }
-
-
-
-  useEffect(()=>{
-    if(disputesFilterValue==="all"){
-      setIsSearchingDisputes(false)
-    }else if(!disputesFilterValue){
-      return
-    } else{
-      handleFilterDisputes(disputesFilterValue)
-    }
-  }, [disputesFilterValue])
-
+function FilterOptions({ tab, onTabChange, counts, loading = false, search, onSearchChange }: FilterOptionsProps) {
   return (
-    <div className="bg-white border border-emerald-500/20 rounded-md p-4 cursor-pointer ">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search *}
-            <div className="flex-1 relative">
-              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search by dispute ID..."
-                onChange={e=>{handleSearch(e.target.value)}}
-                className="w-full bg-gray-50 shadow-none border-gray-200 rounded-sm text-gray-900 placeholder-gray-400 pl-11 pr-4 py-2.5 h-9 focus:outline-none"
-              />
-            </div>*/}
+    <div className={`${filterBar} lg:justify-between`}>
+      <div role="tablist" aria-label="Dispute status" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5 sm:pb-0">
+        {TABS.map((t) => {
+          const active = tab === t.value
+          return (
+            <button
+              key={t.value}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => onTabChange(t.value)}
+              className={`inline-flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-full px-4 text-sm font-bold transition-colors ${active ? "bg-ink text-white" : "text-black/60 hover:bg-cream hover:text-ink"}`}
+            >
+              {t.label}
+              <span className={`min-w-6 rounded-full px-1.5 py-0.5 text-center font-space text-[11px] ${active ? (t.value === "open" ? "bg-lime text-ink" : "bg-white/15 text-white") : "bg-cream text-black/60"}`}>
+                {loading ? "–" : counts[t.value]}
+              </span>
+            </button>
+          )
+        })}
+      </div>
 
-            {/* Filters */}
-            <div className="flex flex-wrap flex-1 gap-3">
-              {/* Status Filter */}
-             {/*} <Select value={disputesFilterValue} onValueChange={setdisputesFilterValue}>
-                <SelectTrigger className="flex-1 w-[160px] h-9 font-mont bg-gray-50 border-gray-200 rounded-sm">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='all'>All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>*/}
-
-              {/* Date Range Filter */}
-              <Select value={disputesFilterValue} onValueChange={setdisputesFilterValue} >
-                <SelectTrigger className="flex-1 w-[160px] h-9 bg-gray-50 border-gray-200 rounded-sm">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-
+      <div className="relative min-w-0 flex-1 lg:max-w-sm">
+        <IconSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
+        <Input
+          type="search"
+          value={search}
+          aria-label="Search disputes"
+          placeholder="Search order #, customer or store..."
+          onChange={(e) => onSearchChange(e.target.value)}
+          className={`${searchInput} pl-10 pr-10`}
+        />
+        {search && (
+          <button
+            type="button"
+            aria-label="Clear search"
+            onClick={() => onSearchChange("")}
+            className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-black/45 hover:bg-cream hover:text-ink"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+    </div>
   )
 }
 

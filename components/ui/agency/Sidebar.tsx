@@ -1,37 +1,111 @@
 "use client"
-import React, { useState } from 'react'
-import { TbShoppingBag } from "react-icons/tb";
-import { MdOutlineDashboard } from "react-icons/md";
-import { GrUserWorker } from 'react-icons/gr';
-import { GoProject } from 'react-icons/go';
-import { FiMessageSquare } from 'react-icons/fi';
-import { IoSettingsOutline } from 'react-icons/io5';
-import { BsPerson } from 'react-icons/bs';
-import { SlLogout } from 'react-icons/sl';
+import React, { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import { useAgencyContext } from './AgencyContext';
-import { Bell } from 'lucide-react';
+import { FolderKanban, LayoutDashboard, LogOut, MessageSquare, Settings, UserRound, UsersRound } from '@/components/icons';
+import { Logo } from '@/app/components/landing/Logo';
+import { authService } from '@/services/auth'
+import { ChevronRight } from '@/components/icons'
+
+export const navItems = [
+    { label: "Dashboard", icon: LayoutDashboard },
+    { label: "Agents", icon: UsersRound },
+    { label: "Projects", icon: FolderKanban },
+    { label: "Messages", icon: MessageSquare },
+    { label: "Settings", icon: Settings },
+]
+
+const collapsedItem = 'h-11 w-11 min-h-0 justify-center gap-0 px-0'
+const itemBase = 'group relative flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-full px-4 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime/60'
+
+export function Brand() {
+    return (
+        <div className='flex items-center gap-2.5'>
+            <Logo dark />
+            <span className='rounded-full bg-lime px-2 py-0.5 font-space text-[10px] font-bold uppercase tracking-widest text-ink group-data-[collapsible=icon]:hidden'>Agency</span>
+        </div>
+    )
+}
+
+interface SidebarNavProps {
+    onNavigate?: () => void
+    collapsed?: boolean
+}
+
+export function SidebarNav({ onNavigate, collapsed = false }: SidebarNavProps) {
+    const {currentPage, setCurrentPage} = useAgencyContext()
+    return <>
+        <nav className={`flex flex-1 flex-col gap-1 overflow-y-auto py-6 ${collapsed ? 'items-center px-3' : 'px-4'}`}>
+            <p className={`eyebrow pb-3 font-space text-[10px] text-white/35 ${collapsed ? 'sr-only' : 'px-4'}`}>Menu</p>
+            {navItems.map(({ label, icon: Icon }) => {
+                const active = currentPage === label
+                return (
+                    <button
+                        key={label}
+                        type='button'
+                        onClick={() => { setCurrentPage(label); onNavigate && onNavigate() }}
+                        aria-current={active ? "page" : undefined}
+                        title={collapsed ? label : undefined}
+                        aria-label={collapsed ? label : undefined}
+                        className={`${itemBase} ${collapsed ? collapsedItem : ''} ${active ? "font-bold text-ink" : "text-white/60 hover:bg-white/5 hover:text-white"}`}
+                    >
+                        {active && (
+                            <motion.span
+                                layoutId={onNavigate ? 'agency-nav-pill-mobile' : 'agency-nav-pill'}
+                                transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+                                className='absolute inset-0 rounded-full bg-lime'
+                            />
+                        )}
+                        <Icon size={18} className={`relative ${active ? "text-ink" : "text-white/45 group-hover:text-white"}`} />
+                        {!collapsed && <span className='relative'>{label}</span>}
+                    </button>
+                )
+            })}
+        </nav>
+        <div className={`mb-4 flex flex-col gap-1 rounded-3xl bg-white/5 p-2 ${collapsed ? 'mx-3 items-center' : 'mx-4'}`}>
+            <button type='button' title={collapsed ? 'Profile' : undefined} aria-label='Profile' className={`${itemBase} ${collapsed ? collapsedItem : ''} text-white/60 hover:bg-white/5 hover:text-white`}><UserRound size={18} className='shrink-0 text-white/45 group-hover:text-white' />{!collapsed && ' Profile'}</button>
+            <button type='button' title={collapsed ? 'Logout' : undefined} aria-label='Logout' onClick={() => authService.logout()} className={`${itemBase} ${collapsed ? collapsedItem : ''} text-white/60 hover:bg-red-500/15 hover:text-red-300`}><LogOut size={18} className='shrink-0 text-white/45 group-hover:text-red-300' />{!collapsed && ' Logout'}</button>
+        </div>
+    </>
+}
+
+const COLLAPSE_KEY = 'agency-sidebar-collapsed'
 
 function Sidebar() {
-    const {currentPage, setCurrentPage} = useAgencyContext()
+  const [collapsed, setCollapsed] = useState(false)
+
+  useEffect(() => {
+    let saved = false
+    try { saved = localStorage.getItem(COLLAPSE_KEY) === '1' } catch { /* ignore */ }
+    if (saved) Promise.resolve().then(() => setCollapsed(true))
+  }, [])
+
+  const toggle = () => {
+    setCollapsed((c) => {
+      try { localStorage.setItem(COLLAPSE_KEY, c ? '0' : '1') } catch { /* ignore */ }
+      return !c
+    })
+  }
+
   return (
-    <div className='hidden h-screen bg-emerald-700  w-[15vw] min-w-[160px] max-w-[320px] md:flex flex-col border-black'>
-        <h1 className='text-emerald-400 h-[100px] p-8 border-b-[1px] border-b-gray-400 font-noto flex items-center gap-2 text-3xl font-bold'>
-            <TbShoppingBag className="min-w-[30px] min-h-[30px]" />
-            Escro
-        </h1>
-        <div className='text-white font-mont p-4 flex flex-col gap-3 max-h-[70vh] overflow-y-auto'>
-            <span onClick={()=>setCurrentPage("Dashboard")} className={`flex items-center gap-2 text-md p-2 ${currentPage === "Dashboard" ? "bg-white/20" : ""} rounded-lg cursor-pointer hover:bg-white/20 transition-bg duration-300 ease-in-out`} ><MdOutlineDashboard className='min-w-[15px] min-h-[15px]' /> Dashboard</span>
-            <span onClick={()=>setCurrentPage("Agents")} className={`flex items-center gap-2 text-md p-2 ${currentPage === "Agents" ? "bg-white/20" : ""} rounded-lg cursor-pointer hover:bg-white/20 transition-bg duration-300 ease-in-out`} ><GrUserWorker className='min-w-[15px] min-h-[15px]' /> Agents</span>
-            <span onClick={()=>setCurrentPage("Projects")} className={`flex items-center gap-2 text-md p-2 ${currentPage === "Projects" ? "bg-white/20" : ""} rounded-lg cursor-pointer hover:bg-white/20 transition-bg duration-300 ease-in-out`} ><GoProject className='min-w-[15px] min-h-[15px]' /> Projects</span>
-            <span onClick={()=>setCurrentPage("Messages")} className={`flex items-center gap-2 text-md p-2 ${currentPage === "Messages" ? "bg-white/20" : ""} rounded-lg cursor-pointer hover:bg-white/20 transition-bg duration-300 ease-in-out`} ><FiMessageSquare className='min-w-[15px] min-h-[15px]' /> Messages</span>
-           {/* <span onClick={()=>setCurrentPage("Notifications")} className={`flex items-center gap-2 text-md p-2 ${currentPage === "Notifications" ? "bg-white/20" : ""} rounded-lg cursor-pointer hover:bg-white/20 transition-bg duration-300 ease-in-out`} ><Bell   size={17} /> Notifications</span>*/}
-            <span onClick={()=>setCurrentPage("Settings")} className={`flex items-center gap-2 text-md p-2 ${currentPage === "Settings" ? "bg-white/20" : ""} rounded-lg cursor-pointer hover:bg-white/20 transition-bg duration-300 ease-in-out`} ><IoSettingsOutline className='min-w-[15px] min-h-[15px]' /> Settings</span>
+    <aside
+      data-collapsible={collapsed ? 'icon' : undefined}
+      className={`group relative hidden h-dvh shrink-0 flex-col bg-ink font-mont transition-[width] duration-300 ease-out lg:flex ${collapsed ? 'w-[4.5rem]' : 'w-64'}`}
+    >
+        <div className={`flex h-20 shrink-0 items-center ${collapsed ? 'justify-center px-0' : 'px-6'}`}>
+            <Brand />
         </div>
-        <div className='text-white font-mont p-4 flex flex-col gap-1 h-[fit-content]  border-t-[1px] border-t-gray-400 mt-auto'>
-            <span className='flex items-center gap-2 text-md p-2  rounded-lg cursor-pointer hover:bg-white/20 transition-bg duration-300 ease-in-out'><BsPerson className='min-w-[15px] min-h-[15px]' /> Profile</span>
-            <span className='flex items-center gap-2 text-md p-2  rounded-lg cursor-pointer hover:bg-white/20 transition-bg duration-300 ease-in-out'><SlLogout className='min-w-[15px] min-h-[15px]' /> Logout</span>
-        </div>
-    </div>
+        <button
+          type='button'
+          onClick={toggle}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className='absolute -right-3 top-7 z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-lime text-ink shadow-md ring-2 ring-cream transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-ink'
+        >
+          <ChevronRight size={14} className={`transition-transform duration-300 ${collapsed ? '' : 'rotate-180'}`} />
+        </button>
+        <SidebarNav collapsed={collapsed} />
+    </aside>
   )
 }
 

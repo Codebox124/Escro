@@ -1,120 +1,195 @@
-"use client";
+// app/mystore/_components/sales-chart.tsx
+'use client';
 
+import { Line } from 'react-chartjs-2';
+import { useMoney } from './currency';
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
   Tooltip,
   Legend,
-  ResponsiveContainer,
-} from "recharts";
-import { ChartConfig, ChartContainer } from "@/components/ui/chart";
+  Filler
+} from 'chart.js';
 
-const chartData = [
-  { day: "Mon", sales: 4200, orders: 52 },
-  { day: "Tue", sales: 5800, orders: 68 },
-  { day: "Wed", sales: 4600, orders: 58 },
-  { day: "Thu", sales: 7200, orders: 84 },
-  { day: "Fri", sales: 6800, orders: 76 },
-  { day: "Sat", sales: 8400, orders: 95 },
-  { day: "Sun", sales: 5900, orders: 64 },
-];
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
-const chartConfig = {
-  sales: {
-    label: "Sales ($)",
-    color: "#10B981", // emerald-500
-  },
-  orders: {
-    label: "Orders",
-    color: "#F59E0B", // amber-500
-  },
-} satisfies ChartConfig;
+interface SalesChartProps {
+  data?: {
+    labels?: string[];
+    datasets?: Array<{
+      label: string;
+      data: number[];
+    }>;
+  };
+}
 
-export default function SalesChart() {
-  const totalSales = chartData.reduce((acc, d) => acc + d.sales, 0);
-  const totalOrders = chartData.reduce((acc, d) => acc + d.orders, 0);
+const SalesChart = ({ data }: SalesChartProps) => {
+  const { format } = useMoney();
+
+  const chartData = {
+    labels: data?.labels || [],
+    datasets: data?.datasets || [],
+  };
+  const hasData = chartData.datasets.some((d) => (d.data || []).some((v) => Number(v) > 0));
+
+  const chartConfig = {
+    labels: chartData.labels,
+    datasets: (chartData.datasets || []).map((dataset, index) => ({
+      label: dataset.label,
+      data: dataset.data,
+      borderColor: index === 0 ? '#0C110E' : '#10b981',
+      backgroundColor: index === 0 ? 'rgba(200, 241, 105, 0.35)' : 'rgba(16, 185, 129, 0.08)',
+      borderWidth: 2.5,
+      fill: true,
+      tension: 0.4,
+      pointRadius: 4,
+      pointHoverRadius: 7,
+      pointBorderColor: index === 0 ? '#0C110E' : '#10b981',
+      pointBackgroundColor: index === 0 ? '#C8F169' : '#fff',
+      pointHoverBackgroundColor: '#C8F169',
+      pointHoverBorderColor: '#0C110E',
+      pointBorderWidth: 2,
+    })),
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index' as const,
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        display: (chartData.datasets || []).length > 1,
+        position: 'top' as const,
+        align: 'end' as const,
+        labels: {
+          usePointStyle: true,
+          padding: 15,
+          font: {
+            size: 12,
+            family: "'Montserrat', sans-serif",
+          },
+        },
+      },
+      title: {
+        display: false,
+      },
+      tooltip: {
+        backgroundColor: '#0C110E',
+        titleColor: 'rgba(255, 255, 255, 0.6)',
+        bodyColor: '#C8F169',
+        padding: 12,
+        cornerRadius: 14,
+        displayColors: false,
+        titleFont: {
+          size: 13,
+          family: "'Montserrat', sans-serif",
+        },
+        bodyFont: {
+          size: 12,
+          family: "'Montserrat', sans-serif",
+        },
+        callbacks: {
+          label: function(context: { dataset: { label?: string }; parsed: { y: number | null } }) {
+            let label = context.dataset.label || '';
+            if (label) {
+              label += ': ';
+            }
+            if (context.parsed.y !== null) {
+              label += format(context.parsed.y);
+            }
+            return label;
+          }
+        }
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        suggestedMax: hasData ? undefined : 1000,
+        border: {
+          display: false,
+        },
+        grid: {
+          color: 'rgba(12, 17, 14, 0.05)',
+          drawTicks: false,
+        },
+        ticks: {
+          color: 'rgba(12, 17, 14, 0.4)',
+          maxTicksLimit: 6,
+          callback: function(value: number | string) {
+            return format(value, { compact: true });
+          },
+          font: {
+            size: 11,
+            family: "'Space', monospace",
+          },
+        },
+      },
+      x: {
+        border: {
+          display: false,
+        },
+        grid: {
+          display: false,
+        },
+        ticks: {
+          color: 'rgba(12, 17, 14, 0.4)',
+          autoSkip: true,
+          maxRotation: 0,
+          font: {
+            size: 11,
+            family: "'Space', monospace",
+          },
+        },
+      },
+    },
+  };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300">
-      {/* Header */}
-      <div className="mb-6">
-        <h3 className="text-gray-900 text-xl font-bold mb-1">Sales Overview</h3>
-        <p className="text-gray-500 text-sm">Last 7 days performance</p>
+    <div className="surface-card p-5 sm:p-7">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="eyebrow font-space text-emerald-700">Performance</p>
+          <h2 className="mt-1.5 text-xl font-extrabold tracking-[-0.02em] text-ink sm:text-2xl">Sales Overview</h2>
+          <p className="mt-0.5 text-sm text-black/55">Your sales over the last 7 days</p>
+        </div>
+        {hasData && (
+          <span className="inline-flex items-center gap-2 rounded-full bg-ink px-3 py-1.5 font-space text-[11px] uppercase tracking-wider text-white">
+            <span className="h-2 w-2 rounded-full bg-lime" />
+            Live
+          </span>
+        )}
       </div>
-
-      {/* Chart */}
-      <ChartContainer config={chartConfig} className="h-[350px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={chartData}
-            margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="#E5E7EB"
-              vertical={false}
-            />
-            <XAxis
-              dataKey="day"
-              stroke="#9CA3AF"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              stroke="#9CA3AF"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(value) => `$${value}`}
-            />
-            <Tooltip
-              cursor={{ fill: "rgba(16, 185, 129, 0.1)" }}
-              contentStyle={{
-                backgroundColor: "white",
-                border: "1px solid #E5E7EB",
-                borderRadius: "8px",
-                padding: "8px 12px",
-              }}
-              labelStyle={{ color: "#111827", fontWeight: 600 }}
-            />
-            <Legend wrapperStyle={{ paddingTop: "20px" }} iconType="circle" />
-            <Bar
-              dataKey="sales"
-              fill="var(--color-sales)"
-              radius={[8, 8, 0, 0]}
-              maxBarSize={40}
-            />
-            <Bar
-              dataKey="orders"
-              fill="var(--color-orders)"
-              radius={[8, 8, 0, 0]}
-              maxBarSize={40}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartContainer>
-
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-gray-200">
-        <div className="text-center">
-          <p className="text-gray-500 text-xs font-medium uppercase tracking-wide mb-1">
-            Total Sales
-          </p>
-          <p className="text-gray-900 text-2xl font-bold">
-            ${totalSales.toLocaleString()}
-          </p>
-        </div>
-        <div className="text-center">
-          <p className="text-gray-500 text-xs font-medium uppercase tracking-wide mb-1">
-            Total Orders
-          </p>
-          <p className="text-gray-900 text-2xl font-bold">{totalOrders}</p>
-        </div>
+      <div className="relative h-60 w-full min-w-0 sm:h-72 lg:h-80">
+        {chartData.labels.length > 0 && <Line data={chartConfig} options={options} />}
+        {!hasData && (
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="rounded-2xl bg-white/90 px-5 py-4 text-center ring-1 ring-black/5 backdrop-blur">
+              <p className="font-bold text-ink">No sales in the last 7 days</p>
+              <p className="mt-0.5 text-sm text-black/55">New orders will show up here.</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
-}
+};
+
+export default SalesChart;

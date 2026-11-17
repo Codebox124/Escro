@@ -19,13 +19,13 @@ function View() {
     }
   </AnimatePresence>
   {
-    currentPage === "Dashboard"? <Dashboard /> : 
-    currentPage === "Agents"? <Agents /> : 
-    currentPage === "Projects"? <Projects /> : 
-    currentPage === "Messages"? <Messages /> : 
+    currentPage === "Dashboard"? <Dashboard /> :
+    currentPage === "Agents"? <Agents /> :
+    currentPage === "Projects"? <Projects /> :
+    currentPage === "Messages"? <Messages /> :
     /*currentPage === "Notifications"? <Notifications /> : */
-    currentPage === "Settings"? <Settings /> :   
-    null
+    currentPage === "Settings"? <Settings /> :
+    <Dashboard />
   }
   </>
 }

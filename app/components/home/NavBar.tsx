@@ -11,7 +11,7 @@ import {
   LogIn,
   UserPlus,
   ArrowRight,
-} from "lucide-react";
+} from "@/components/icons";
 
 const NavBar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -158,6 +158,9 @@ const NavBar = () => {
     },
   ];
 
+  const isActive = (href: string) =>
+    activeLink === href.replace("#", "").toLowerCase();
+
   return (
     <>
       <nav
@@ -165,97 +168,85 @@ const NavBar = () => {
           isOpen
             ? "opacity-0 pointer-events-none"
             : scrolled
-            ? "bg-zinc-900/95 backdrop-blur-xl border-b border-zinc-800/50 py-3"
-            : "bg-transparent py-5"
+            ? "bg-zinc-950/85 backdrop-blur-xl border-b border-white/5 shadow-lg shadow-black/20 py-2.5"
+            : "bg-transparent border-b border-transparent py-4 sm:py-5"
         }`}
       >
-        <div className="container mx-auto px-6">
-          <div className="flex items-center justify-between">
+        <div className="page-container">
+          <div className="flex items-center justify-between gap-4">
             <a
               href="#home"
               onClick={handleLogoClick}
-              className="flex items-center gap-3 group/logo"
+              className="flex items-center gap-3 rounded-xl group/logo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
             >
               <div className="relative">
-                <div
-                  className={`absolute inset-0 rounded-xl ${
-                    scrolled
-                      ? "bg-emerald-500/20"
-                      : "bg-gradient-to-br from-emerald-500/30 to-transparent"
-                  } blur-md group-hover/logo:blur-xl transition-all duration-500`}
-                />
-                <div
-                  className={`relative flex items-center justify-center w-12 h-12 rounded-xl ${
-                    scrolled
-                      ? "bg-zinc-900/80 border border-zinc-800"
-                      : "bg-gradient-to-br from-emerald-500/10 to-emerald-600/10 border border-emerald-500/20"
-                  } backdrop-blur-sm group-hover/logo:scale-105 transition-transform duration-300`}
-                >
-                  <Shield className="w-6 h-6 text-emerald-400 group-hover/logo:scale-110 transition-transform duration-300" />
+                <div className="absolute inset-0 rounded-xl bg-emerald-500/30 blur-md transition-all duration-500 group-hover/logo:blur-lg" />
+                <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-600/30 transition-transform duration-300 group-hover/logo:scale-105 sm:h-11 sm:w-11">
+                  <Shield className="h-5 w-5 text-white" />
                 </div>
               </div>
-              <div className="flex flex-col">
-                <span className="text-xl font-bold text-white font-mont tracking-tight group-hover/logo:text-emerald-400 transition-colors duration-300">
+              <div className="flex flex-col leading-none">
+                <span className="font-mont text-lg font-bold tracking-tight text-white sm:text-xl">
                   Escro
                 </span>
-                <span className="text-xs text-emerald-400 font-medium -mt-1 group-hover/logo:text-emerald-300 transition-colors duration-300">
+                <span className="mt-1 text-[11px] font-medium text-emerald-400">
                   Secure Marketplace
                 </span>
               </div>
             </a>
 
-            <div className="hidden lg:flex items-center gap-2 absolute left-1/2 transform -translate-x-1/2">
+            <div className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 rounded-2xl border border-white/5 bg-white/[0.03] p-1 backdrop-blur-md lg:flex">
               {navLinks.map((link, index) => (
                 <a
                   key={index}
                   href={link.href}
                   onClick={(e) => handleNavClick(e, link.href)}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 group/navlink ${
-                    activeLink === link.name.toLowerCase()
-                      ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
-                      : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+                  className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${
+                    isActive(link.href)
+                      ? "bg-emerald-500/15 text-emerald-300"
+                      : "text-zinc-400 hover:bg-white/5 hover:text-white"
                   }`}
                 >
-                  <link.icon className="w-4 h-4 group-hover/navlink:scale-110 transition-transform duration-300" />
-                  <span className="font-medium group-hover/navlink:translate-x-0.5 transition-transform duration-300">
-                    {link.name}
-                  </span>
+                  <link.icon className="h-4 w-4" />
+                  {link.name}
                 </a>
               ))}
             </div>
 
-            <div className="hidden lg:flex items-center gap-3">
+            <div className="hidden items-center gap-2 lg:flex">
+              <a
+                href="/login"
+                className="inline-flex h-11 items-center gap-2 rounded-xl px-4 text-sm font-semibold text-zinc-300 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
+              >
+                Sign In
+              </a>
               <a
                 href="/signup"
-                className="group relative overflow-hidden flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold hover:shadow-2xl hover:shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95"
+                className="group inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-500 px-5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-600 hover:shadow-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-[0.98]"
               >
-                <span className="relative z-10 flex items-center gap-2">
-                  Get Started
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                Get Started
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </a>
             </div>
 
-            <div className="flex lg:hidden items-center gap-3">
+            <div className="flex items-center gap-2 lg:hidden">
               <a
                 href="/signup"
-                className="group flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold hover:shadow-lg hover:shadow-emerald-500/25 transition-all active:scale-95"
+                aria-label="Get Started"
+                className="group inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 active:scale-[0.98]"
               >
                 <span className="hidden sm:inline">Get Started</span>
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </a>
 
               <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="p-2.5 rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-400 hover:text-white hover:border-emerald-500/30 transition-all group"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-300 transition-all hover:border-emerald-500/40 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
                 aria-label="Toggle menu"
+                aria-expanded={isOpen}
+                aria-controls="mobile-menu"
               >
-                {isOpen ? (
-                  <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-                ) : (
-                  <Menu className="w-5 h-5 group-hover:rotate-180 transition-transform duration-300" />
-                )}
+                {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
             </div>
           </div>
@@ -263,160 +254,144 @@ const NavBar = () => {
       </nav>
 
       <div
-        className={`lg:hidden fixed inset-0 z-50 transition-all duration-500 ${
+        className={`fixed inset-0 z-50 transition-all duration-300 lg:hidden ${
           isOpen
-            ? "opacity-100 visible"
-            : "opacity-0 invisible pointer-events-none"
+            ? "visible opacity-100"
+            : "pointer-events-none invisible opacity-0"
         }`}
       >
         <div
-          className="absolute inset-0 bg-black/80 backdrop-blur-xl"
+          className="absolute inset-0 bg-black/70 backdrop-blur-sm"
           onClick={() => setIsOpen(false)}
         />
 
         <div
-          className={`absolute top-0 right-0 h-full w-full max-w-sm bg-zinc-950/95 backdrop-blur-2xl border-l border-zinc-800 transform transition-transform duration-500 ${
+          id="mobile-menu"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu"
+          className={`absolute right-0 top-0 flex h-dvh w-full max-w-sm flex-col border-l border-white/10 bg-zinc-950 shadow-2xl transition-transform duration-300 ease-out ${
             isOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
-          <div className="p-6 border-b border-zinc-800">
-            <div className="flex items-center justify-between mb-8">
-              <a
-                href="#home"
-                onClick={handleLogoClick}
-                className="flex items-center gap-3 group/logo"
-              >
-                <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 border border-emerald-500/30 group-hover/logo:scale-105 transition-transform duration-300">
-                  <Shield className="w-6 h-6 text-emerald-400" />
-                </div>
-                <div>
-                  <div className="text-xl font-bold text-white group-hover/logo:text-emerald-400 transition-colors duration-300">
-                    Escro
-                  </div>
-                  <div className="text-xs text-emerald-400 group-hover/logo:text-emerald-300 transition-colors duration-300">
-                    Secure Marketplace
-                  </div>
-                </div>
-              </a>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-2.5 rounded-lg border border-zinc-800 bg-zinc-900/50 hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-all group"
-              >
-                <X className="w-5 h-5 text-zinc-400 group-hover:text-emerald-400 group-hover:rotate-90 transition-all duration-300" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="text-sm text-zinc-500 text-center">
-                Join thousands of trusted users
+          <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
+            <a
+              href="#home"
+              onClick={handleLogoClick}
+              className="flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600">
+                <Shield className="h-5 w-5 text-white" />
               </div>
-              <div className="flex gap-3">
-                <a
-                  href="#signin"
-                  onClick={() => setIsOpen(false)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-zinc-800 bg-zinc-900/50 text-zinc-300 hover:text-white hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-all group"
-                >
-                  <LogIn className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
-                  <span className="font-medium group-hover:translate-x-0.5 transition-transform duration-300">
-                    Sign In
-                  </span>
-                </a>
-                <a
-                  href="/signup"
-                  onClick={() => setIsOpen(false)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:shadow-lg hover:shadow-emerald-500/25 transition-all group"
-                >
-                  <UserPlus className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
-                  <span className="font-medium group-hover:translate-x-0.5 transition-transform duration-300">
-                    Sign Up
-                  </span>
-                </a>
+              <div className="leading-none">
+                <div className="font-mont text-lg font-bold text-white">Escro</div>
+                <div className="mt-1 text-[11px] font-medium text-emerald-400">
+                  Secure Marketplace
+                </div>
               </div>
-            </div>
+            </a>
+            <button
+              onClick={() => setIsOpen(false)}
+              aria-label="Close menu"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-zinc-400 transition-all hover:border-emerald-500/40 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
-          <div className="p-6 overflow-y-auto h-[calc(100vh-200px)]">
-            <div className="space-y-1 mb-8">
-              <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider px-4 mb-2">
+          <div className="flex-1 overflow-y-auto px-5 py-6">
+            <div className="mb-8">
+              <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
                 Navigation
               </div>
-              {navLinks.map((link, index) => (
-                <a
-                  key={index}
-                  href={link.href}
-                  onClick={(e) => handleNavClick(e, link.href)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all group/navlink ${
-                    activeLink === link.name.toLowerCase()
-                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                      : "text-zinc-400 hover:text-white hover:bg-zinc-900/50 hover:border hover:border-zinc-800"
-                  }`}
-                >
-                  <link.icon className="w-5 h-5 group-hover/navlink:scale-110 transition-transform duration-300" />
-                  <span className="font-medium group-hover/navlink:translate-x-1 transition-transform duration-300">
+              <div className="space-y-1">
+                {navLinks.map((link, index) => (
+                  <a
+                    key={index}
+                    href={link.href}
+                    onClick={(e) => handleNavClick(e, link.href)}
+                    className={`flex h-12 items-center gap-3 rounded-xl px-3 font-medium transition-colors ${
+                      isActive(link.href)
+                        ? "bg-emerald-500/15 text-emerald-300"
+                        : "text-zinc-300 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <link.icon className="h-5 w-5" />
                     {link.name}
-                  </span>
-                </a>
-              ))}
+                  </a>
+                ))}
+              </div>
             </div>
 
-            <div className="space-y-1 mb-8">
-              <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider px-4 mb-2">
+            <div className="mb-8">
+              <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
                 Learn More
               </div>
-              {["Features", "For Customers", "For Couriers", "Pricing"].map(
-                (item, idx) => (
-                  <a
-                    key={idx}
-                    href="#"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900/50 hover:border hover:border-zinc-800 transition-all group"
-                  >
-                    <span className="font-medium group-hover:translate-x-1 transition-transform duration-300">
+              <div className="space-y-1">
+                {["Features", "For Customers", "For Couriers", "Pricing"].map(
+                  (item, idx) => (
+                    <a
+                      key={idx}
+                      href="#"
+                      onClick={() => setIsOpen(false)}
+                      className="flex h-11 items-center rounded-xl px-3 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-white"
+                    >
                       {item}
-                    </span>
-                  </a>
-                )
-              )}
+                    </a>
+                  )
+                )}
+              </div>
             </div>
 
-            <div className="space-y-1">
-              <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider px-4 mb-2">
+            <div>
+              <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
                 Support
               </div>
-              {["Help Center", "Contact Us", "Privacy Policy", "Terms"].map(
-                (item, idx) => (
-                  <a
-                    key={idx}
-                    href="#"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900/50 hover:border hover:border-zinc-800 transition-all group"
-                  >
-                    <span className="font-medium group-hover:translate-x-1 transition-transform duration-300">
+              <div className="space-y-1">
+                {["Help Center", "Contact Us", "Privacy Policy", "Terms"].map(
+                  (item, idx) => (
+                    <a
+                      key={idx}
+                      href="#"
+                      onClick={() => setIsOpen(false)}
+                      className="flex h-11 items-center rounded-xl px-3 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-white"
+                    >
                       {item}
-                    </span>
-                  </a>
-                )
-              )}
+                    </a>
+                  )
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-zinc-800 bg-zinc-950">
-            <div className="flex flex-col items-center gap-3">
-              <div className="text-sm text-zinc-500 text-center">
-                Need help getting started?
-              </div>
+          <div className="space-y-3 border-t border-white/5 bg-zinc-950 px-5 py-5">
+            <div className="grid grid-cols-2 gap-3">
               <a
-                href="#contact"
+                href="/login"
                 onClick={() => setIsOpen(false)}
-                className="w-full py-3 rounded-xl border border-zinc-800 bg-zinc-900/50 text-white font-medium hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-all text-center group"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 text-sm font-semibold text-zinc-200 transition-colors hover:border-emerald-500/40 hover:text-white"
               >
-                <span className="group-hover:translate-x-0.5 transition-transform duration-300 inline-block">
-                  Contact Support
-                </span>
+                <LogIn className="h-4 w-4" />
+                Sign In
               </a>
-              <div className="text-xs text-zinc-600 text-center">
-                © {new Date().getFullYear()} Escro. All rights reserved.
-              </div>
+              <a
+                href="/signup"
+                onClick={() => setIsOpen(false)}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-500 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:bg-emerald-600"
+              >
+                <UserPlus className="h-4 w-4" />
+                Sign Up
+              </a>
+            </div>
+            <a
+              href="#contact"
+              onClick={() => setIsOpen(false)}
+              className="block text-center text-sm text-zinc-400 transition-colors hover:text-emerald-400"
+            >
+              Need help getting started? <span className="font-semibold">Contact Support</span>
+            </a>
+            <div className="text-center text-xs text-zinc-600">
+              © {new Date().getFullYear()} Escro. All rights reserved.
             </div>
           </div>
         </div>
@@ -424,18 +399,16 @@ const NavBar = () => {
 
       {isMounted && (
         <div
-          className={`fixed top-0 left-0 right-0 z-40 h-0.5 transition-opacity duration-300 ${
+          className={`fixed top-0 left-0 right-0 z-[60] h-0.5 transition-opacity duration-300 ${
             isOpen ? "opacity-0" : "opacity-100"
           }`}
         >
-          <div className="h-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-transparent">
-            <div
-              className="h-full bg-emerald-400 transition-all duration-300"
-              style={{
-                width: `${scrollProgress}%`,
-              }}
-            />
-          </div>
+          <div
+            className="h-full bg-gradient-to-r from-emerald-500 to-emerald-300 transition-[width] duration-150"
+            style={{
+              width: `${scrollProgress}%`,
+            }}
+          />
         </div>
       )}
     </>

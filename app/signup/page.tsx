@@ -1,194 +1,295 @@
 "use client";
 
 import React, { useState } from "react";
-import StepIndicator from "../components/auth/StepIndicator";
-import StepOne from "../components/auth/steps/StepOne";
-import StepTwo from "../components/auth/steps/StepTwo";
-import StepThree from "../components/auth/steps/StepThree";
-import StepFour from "../components/auth/steps/StepFour";
-import DemoCreds from "../components/auth/DemoCreds";
+import { useRouter } from "next/navigation";
+import { authService } from "../../services/auth";
+import {
+  Mail,
+  Lock,
+  User,
+  Phone,
+  Eye,
+  EyeOff,
+  ShoppingBag,
+  Store,
+  Truck,
+  Building2,
+  Check,
+} from "@/components/icons";
+import Link from "next/link";
+import AuthShell, {
+  AuthError,
+  AuthSubmitButton,
+  Highlight,
+  authIconClass,
+  authInputClass,
+  authLabelClass,
+  authLinkClass,
+} from "../components/auth/AuthShell";
+
+const roles = [
+  { value: "customer", label: "Customer", desc: "Shop & Buy", icon: ShoppingBag, color: "emerald" },
+  { value: "seller", label: "Store Owner", desc: "Sell Products", icon: Store, color: "amber" },
+  { value: "courier", label: "Courier", desc: "Deliver Orders", icon: Truck, color: "blue" },
+  { value: "agency", label: "Agency", desc: "Manage Logistics", icon: Building2, color: "violet" },
+];
+
+const roleRoutes: Record<string, string> = {
+  customer: "/dashboard",
+  seller: "/mystore",
+  courier: "/courier",
+  agency: "/agency",
+};
+
+const inputClass = authInputClass;
+const labelClass = authLabelClass;
+const iconClass = authIconClass;
 
 export default function SignupPage() {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-
   const [formData, setFormData] = useState({
-    fullName: "",
     email: "",
-    phone: "",
     password: "",
-    confirmPassword: "",
-    role: "",
-    deliveryAddress: "",
-    city: "",
-    state: "",
-    businessName: "",
-    businessRegNumber: "",
-    storeCategory: "",
-    businessAddress: "",
-    taxId: "",
-    vehicleType: "",
-    licenseNumber: "",
-    vehicleRegNumber: "",
-    workingArea: "",
-    agencyName: "",
-    agencyRegNumber: "",
-    courierCount: "",
-    serviceAreas: [] as string[],
-    officeAddress: "",
+    full_name: "",
+    phone: "",
+    role: "customer",
   });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
 
-  const [errors, setErrors] = useState<any>({});
-
-  const steps = [
-    { number: 1, title: "Basic Details", description: "Basic credentials" },
-    { number: 2, title: "Choose Role", description: "Select role" },
-    {
-      number: 3,
-      title: "Additional Info",
-      description: "Role-specific details",
-    },
-    { number: 4, title: "Review", description: "Confirm and submit" },
-  ];
-
-  const handleChange = (field: string, value: string | string[]) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field])
-      setErrors((prev: any) => ({ ...prev, [field]: undefined }));
+  const handleChange = (e: { target: { name: any; value: any } }) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
 
-  const handleFillDemo = (demoData: any) => {
-    setFormData(demoData);
-    setErrors({});
-    setCurrentStep(1);
+  const handleRegister = async (e: { preventDefault: () => void }) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      await authService.register(formData);
+      router.push(roleRoutes[formData.role] || "/");
+    } catch (err) {
+      if (err && typeof err === "object" && "message" in err) {
+        setError((err as { message: string }).message);
+      } else {
+        setError("Registration failed. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const validateStepOne = () => {
-    const newErrors: any = {};
-    if (!formData.fullName.trim()) newErrors.fullName = "Required";
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email) newErrors.email = "Required";
-    else if (!emailRegex.test(formData.email))
-      newErrors.email = "Invalid email";
-    if (!formData.phone) newErrors.phone = "Required";
-    if (!formData.password) newErrors.password = "Required";
-    else if (formData.password.length < 8) newErrors.password = "Too short";
-    if (formData.password !== formData.confirmPassword)
-      newErrors.confirmPassword = "Mismatch";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateStepThree = () => {
-    const newErrors: any = {};
-
-    if (formData.role === "customer" && !formData.deliveryAddress)
-      newErrors.deliveryAddress = "Required";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleStepOneNext = () => {
-    if (validateStepOne()) setCurrentStep(2);
-  };
-  const handleStepTwoNext = () => {
-    if (formData.role) setCurrentStep(3);
-  };
-  const handleStepThreeNext = () => {
-    if (validateStepThree()) setCurrentStep(4);
-  };
-
-  const handleSubmit = async () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      console.log("Form submitted!", formData);
-      alert("Welcome to the future of Commerce.");
-      setIsLoading(false);
-    }, 2000);
-  };
+  const selectedRole = roles.find((r) => r.value === formData.role);
 
   return (
-    <div className="min-h-screen w-full bg-white relative flex items-center justify-center p-4 sm:p-6 lg:p-8 overflow-hidden font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#f5f5f5_1px,transparent_1px),linear-gradient(to_bottom,#f5f5f5_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#fff_70%,transparent_100%)] pointer-events-none" />
+    <AuthShell
+      wide
+      eyebrow="Create account"
+      title="Join Escro"
+      subtitle={
+        <>
+          Set up your account in under a minute
+          {selectedRole && (
+            <>
+              {" "}as {/^[AEIOU]/.test(selectedRole.label) ? "an" : "a"}{" "}
+              <span className="font-semibold text-ink">{selectedRole.label}</span>
+            </>
+          )}
+          .
+        </>
+      }
+      heading={
+        <>
+          Start your
+          <br />
+          <Highlight>journey.</Highlight>
+        </>
+      }
+      description="Join thousands of users on the most secure multi-vendor marketplace. Buy, sell, deliver, or partner with confidence."
+      aside={
+        <ul className="grid grid-cols-2 gap-2">
+          {roles.map((role) => {
+            const active = formData.role === role.value;
+            return (
+              <li
+                key={role.value}
+                className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors duration-300 ${
+                  active ? "bg-lime text-ink" : "bg-white/[0.05] text-white/60"
+                }`}
+              >
+                <role.icon className="h-4 w-4 shrink-0" />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-bold">{role.label}</span>
+                  <span className={`block truncate text-xs ${active ? "text-ink/60" : "text-white/40"}`}>
+                    {role.desc}
+                  </span>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      }
+      footer={
+        <p className="text-sm text-black/55">
+          Already have an account?{" "}
+          <Link href="/login" className={authLinkClass}>
+            Sign in
+          </Link>
+        </p>
+      }
+    >
+      {error && <AuthError message={error} />}
 
-      <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
+      <form onSubmit={handleRegister} className="space-y-5">
+        {/* Role Selection */}
+        <fieldset>
+          <legend className={labelClass}>I want to join as</legend>
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            {roles.map((role) => {
+              const active = formData.role === role.value;
+              return (
+                <button
+                  key={role.value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setFormData({ ...formData, role: role.value })}
+                  className={`relative flex min-h-[88px] flex-col items-start justify-between gap-2 rounded-2xl p-3 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-dark focus-visible:ring-offset-2 ${
+                    active
+                      ? "bg-ink text-white shadow-lg shadow-black/15"
+                      : "bg-cream/70 text-ink ring-1 ring-black/5 hover:bg-cream hover:ring-black/15"
+                  }`}
+                >
+                  {active && (
+                    <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-lime text-ink">
+                      <Check className="h-3 w-3" strokeWidth={3.5} />
+                    </span>
+                  )}
+                  <span
+                    className={`flex h-8 w-8 items-center justify-center rounded-xl ${
+                      active ? "bg-white/10 text-lime" : "bg-white text-ink"
+                    }`}
+                  >
+                    <role.icon className="h-4 w-4" />
+                  </span>
+                  <span>
+                    <span className="block text-xs font-bold leading-tight">{role.label}</span>
+                    <span className={`block text-[11px] ${active ? "text-white/50" : "text-black/45"}`}>
+                      {role.desc}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
 
-      <div className="w-full max-w-2xl relative z-10">
-        <div className="text-center mb-10 space-y-2">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <div className="h-8 w-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white font-bold text-xl">
-              E
+        {/* Full Name */}
+        <div>
+          <label htmlFor="full_name" className={labelClass}>
+            Full name
+          </label>
+          <div className="relative">
+            <User className={iconClass} />
+            <input
+              type="text"
+              name="full_name"
+              id="full_name"
+              placeholder="Enter your full name"
+              autoComplete="name"
+              value={formData.full_name}
+              onChange={handleChange}
+              required
+              className={`${inputClass} pr-4`}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-4">
+          {/* Email */}
+          <div>
+            <label htmlFor="email" className={labelClass}>
+              Email address
+            </label>
+            <div className="relative">
+              <Mail className={iconClass} />
+              <input
+                type="email"
+                name="email"
+                id="email"
+                placeholder="you@example.com"
+                autoComplete="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                className={`${inputClass} pr-4`}
+              />
             </div>
-            <span className="text-2xl font-bold text-gray-900 tracking-tight font-mont">
-              Escro
-            </span>
           </div>
-          <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600 font-mont tracking-tight">
-            Create your account
-          </h1>
-        </div>
 
-        <div className="mb-8">
-          <StepIndicator steps={steps} currentStep={currentStep} />
-        </div>
-
-        <div className="relative group rounded-3xl border border-gray-200 bg-white/90 backdrop-blur-xl shadow-xl transition-all duration-500">
-          <div className="relative p-6 sm:p-10">
-            {currentStep === 1 && (
-              <StepOne
-                formData={formData}
-                errors={errors}
+          {/* Phone */}
+          <div>
+            <label htmlFor="phone" className={labelClass}>
+              Phone <span className="font-normal text-black/40">(optional)</span>
+            </label>
+            <div className="relative">
+              <Phone className={iconClass} />
+              <input
+                type="tel"
+                name="phone"
+                id="phone"
+                placeholder="+1 (555) 000-0000"
+                autoComplete="tel"
+                value={formData.phone}
                 onChange={handleChange}
-                onNext={handleStepOneNext}
+                className={`${inputClass} pr-4`}
               />
-            )}
-
-            {currentStep === 2 && (
-              <StepTwo
-                selectedRole={formData.role}
-                onSelectRole={(role) => handleChange("role", role)}
-                onNext={handleStepTwoNext}
-                onBack={() => setCurrentStep(1)}
-              />
-            )}
-
-            {currentStep === 3 && (
-              <StepThree
-                role={formData.role}
-                formData={formData}
-                errors={errors}
-                onChange={handleChange}
-                onNext={handleStepThreeNext}
-                onBack={() => setCurrentStep(2)}
-              />
-            )}
-
-            {currentStep === 4 && (
-              <StepFour
-                formData={formData}
-                onSubmit={handleSubmit}
-                onBack={() => setCurrentStep(3)}
-                isLoading={isLoading}
-              />
-            )}
+            </div>
           </div>
         </div>
 
-        <div className="mt-8 text-center">
-          <p className="text-xs text-gray-500 font-noto">
-            © 2025 Escro Inc. Secure Transactions Protocol.
-          </p>
+        {/* Password */}
+        <div>
+          <label htmlFor="password" className={labelClass}>
+            Password
+          </label>
+          <div className="relative">
+            <Lock className={iconClass} />
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              id="password"
+              placeholder="Create a strong password"
+              autoComplete="new-password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              className={`${inputClass} pr-12`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-black/40 transition-colors hover:bg-cream hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30"
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
-      </div>
 
-      {currentStep === 1 && (
-        <div className="fixed bottom-4 right-4 z-50 opacity-50 hover:opacity-100 transition-opacity">
-          <DemoCreds onFillDemo={handleFillDemo} />
-        </div>
-      )}
-    </div>
+        {/* Submit */}
+        <AuthSubmitButton loading={loading} loadingText="Creating account..." className="mt-2">
+          Create account
+        </AuthSubmitButton>
+
+        <p className="text-center font-space text-[11px] uppercase tracking-widest text-black/40">
+          Encrypted end to end
+        </p>
+      </form>
+    </AuthShell>
   );
 }

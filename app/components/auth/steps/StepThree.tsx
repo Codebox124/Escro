@@ -14,7 +14,7 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
-} from "lucide-react";
+} from "@/components/icons";
 
 interface StepThreeProps {
   role: string;

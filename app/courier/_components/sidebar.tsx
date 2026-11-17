@@ -4,25 +4,28 @@ import {
   IconLayoutDashboard,
   IconSettings,
   IconUser,
-  IconShoppingBag,
   IconLogout,
   IconCurrencyDollar,
   IconMap,
   IconRoute,
   IconRoute2,
-} from "@tabler/icons-react";
+} from "@/components/icons";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { usePathname } from "next/navigation";
+import { Logo } from "@/app/components/landing/Logo";
+import { authService } from "@/services/auth";
 
 // Menu items with Tabler icons
 const items = [
@@ -59,8 +62,18 @@ const items = [
   },
 ];
 
+const baseItem =
+  "relative h-11 rounded-full px-4 text-sm font-medium transition-all duration-200 focus-visible:ring-2 focus-visible:ring-lime/50 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-11! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:mx-auto";
+const activeItem =
+  "bg-lime text-ink font-bold hover:bg-lime hover:text-ink data-[active=true]:bg-lime";
+const idleItem = "text-white/60 hover:bg-white/10 hover:text-white";
+
 const CourierSidebar = () => {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
+  const { isMobile, setOpenMobile } = useSidebar();
+  const closeOnMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
 
   const isActive = (url: string) => {
     // Exact match for dashboard
@@ -71,46 +84,44 @@ const CourierSidebar = () => {
     return pathname.startsWith(url);
   };
   return (
-    <Sidebar className="border-r border-gray-500 bg-emerald-900">
-      <SidebarContent className="flex flex-col h-full bg-emerald-900">
-        <SidebarGroup className="px-0">
-          <SidebarHeader className="flex flex-row justify-between items-center py-6 border-b border-gray-500">
-            <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full">
-              <IconShoppingBag className="text-emerald-500 w-8 h-8 shrink-0" />
-              <span className="text-xl font-bold text-emerald-500 group-data-[collapsible=icon]:hidden">
-                ESCRO
-              </span>
-            </div>
-          </SidebarHeader>
+    <Sidebar collapsible="icon" className="border-r-0">
+      <SidebarContent className="flex h-full flex-col gap-0 bg-ink text-white">
+        <SidebarHeader className="flex flex-row items-center px-5 pb-4 pt-6 group-data-[collapsible=icon]:px-0">
+          <div className="flex items-center gap-2.5 group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
+            <Logo dark />
+            <span className="rounded-full bg-white/10 px-2 py-0.5 font-space text-[10px] uppercase tracking-widest text-lime group-data-[collapsible=icon]:hidden">
+              Courier
+            </span>
+          </div>
+        </SidebarHeader>
 
+        <SidebarGroup className="px-3 py-4">
+          <SidebarGroupLabel className="eyebrow px-4 font-space text-[10px] text-white/35">
+            Menu
+          </SidebarGroupLabel>
           {/* Menu Items */}
-          <SidebarGroupContent className=" px-2 py-2">
-            <SidebarMenu className="space-y-1">
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1">
               {items.map((item) => {
                 const active = isActive(item.url);
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild
-                      className={`
-                        group/item
-                        transition-all
-                        duration-200
-                        rounded-md
-                        px-3
-                        py-2.5
-                        group-data-[collapsible=icon]:justify-center
-                        ${
-                          active
-                            ? "bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10 hover:text-gray-300"
-                            : "text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-500"
-                        }
-                      `}
+                      className={`${baseItem} ${active ? activeItem : idleItem}`}
                       tooltip={item.title}
                     >
-                      <a href={item.url} className="flex items-center gap-3">
-                        <item.icon className="w-5 h-5 shrink-0" stroke={1.5} />
-                        <span className="group-data-[collapsible=icon]:hidden font-medium">
+                      <a
+                        href={item.url}
+                        onClick={closeOnMobile}
+                        aria-current={active ? "page" : undefined}
+                        className="flex items-center gap-3"
+                      >
+                        <item.icon
+                          className="h-5! w-5! shrink-0"
+                          stroke={active ? 2.25 : 1.75}
+                        />
+                        <span className="group-data-[collapsible=icon]:hidden">
                           {item.title}
                         </span>
                       </a>
@@ -121,30 +132,26 @@ const CourierSidebar = () => {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        <SidebarFooter className="mt-auto border-t border-gray-500">
-          <SidebarMenu className="px-2 py-2">
+
+        <SidebarFooter className="mt-auto px-3 py-4">
+          <div className="mb-2 rounded-3xl bg-ink-soft p-4 group-data-[collapsible=icon]:hidden">
+            <p className="eyebrow font-space text-[10px] text-lime">On the road</p>
+            <p className="mt-1.5 text-sm font-semibold leading-snug text-white">
+              Every drop-off is escrow-protected.
+            </p>
+          </div>
+          <SidebarMenu className="gap-1">
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                className={`
-                  group/item
-                  transition-all
-                  duration-200
-                  rounded-lg
-                  px-3
-                  py-2.5
-                  group-data-[collapsible=icon]:justify-center
-                  ${
-                    pathname.startsWith("/mystore/profile")
-                      ? "bg-emerald-500 text-white"
-                      : "text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-500"
-                  }
-                `}
+                className={`${baseItem} ${
+                  pathname.startsWith("/mystore/profile") ? activeItem : idleItem
+                }`}
                 tooltip="Profile"
               >
-                <a href="/mystore/profile" className="flex items-center gap-3">
-                  <IconUser className="w-5 h-5 shrink-0" stroke={1.5} />
-                  <span className="group-data-[collapsible=icon]:hidden font-medium">
+                <a href="/mystore/profile" onClick={closeOnMobile} className="flex items-center gap-3">
+                  <IconUser className="h-5! w-5! shrink-0" stroke={1.75} />
+                  <span className="group-data-[collapsible=icon]:hidden">
                     Profile
                   </span>
                 </a>
@@ -153,15 +160,15 @@ const CourierSidebar = () => {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                className="group/item hover:bg-emerald-500/10 hover:text-emerald-500 text-gray-300 transition-all duration-200 rounded-lg px-3 py-2.5 data-[active=true]:bg-emerald-500 data-[active=true]:text-white group-data-[collapsible=icon]:justify-center"
+                className={`${baseItem} text-white/60 hover:bg-red-500/15 hover:text-red-300`}
                 tooltip="Logout"
               >
-                <a href="#" className="flex items-center gap-3">
-                  <IconLogout className="w-5 h-5 shrink-0" stroke={1.5} />
-                  <span className="group-data-[collapsible=icon]:hidden font-medium">
+                <button type="button" onClick={() => authService.logout()} className="flex w-full items-center gap-3">
+                  <IconLogout className="h-5! w-5! shrink-0" stroke={1.75} />
+                  <span className="group-data-[collapsible=icon]:hidden">
                     Logout
                   </span>
-                </a>
+                </button>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

@@ -1,12 +1,11 @@
 "use client";
 
 import {
-  IconCheck,
   IconChecks,
   IconClock,
   IconPackage,
   IconX,
-} from "@tabler/icons-react";
+} from "@/components/icons";
 
 interface OrderStats {
   total: number;
@@ -25,39 +24,47 @@ const OrderStatsBar = ({ stats }: OrderStatsProps) => {
       label: "Total Orders",
       value: stats.total,
       icon: IconPackage,
+      tone: "bg-white/10 text-lime ring-white/10",
     },
     {
       label: "Pending",
       value: stats.pending,
       icon: IconClock,
+      tone: "bg-amber-100 text-amber-700 ring-amber-600/10",
     },
     {
       label: "Completed",
       value: stats.completed,
       icon: IconChecks,
+      tone: "bg-emerald-100 text-emerald-700 ring-emerald-600/10",
     },
     {
       label: "Cancelled",
       value: stats.cancelled,
       icon: IconX,
+      tone: "bg-red-100 text-red-700 ring-red-600/10",
     },
   ];
 
   return (
-    <div className="flex flex-wrap gap-3">
-      {statItems.map((item) => (
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+      {statItems.map((item, i) => (
         <div
           key={item.label}
-          className={`bg-emerald-500/10 border-emerald-500/20 border px-4 py-2.5 rounded-sm flex items-center gap-2.5 transition-all hover:shadow-sm`}
+          className={`flex items-center gap-3 p-4 sm:gap-4 sm:p-5 ${i === 0 ? "surface-ink" : "surface-card"}`}
         >
-          <item.icon className={`w-5 h-5  text-emerald-500`} />
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium text-emerald-500`}>
-              {item.label}:
-            </span>
-            <span className={`text-lg font-bold text-emerald-500`}>
+          <div
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset sm:h-11 sm:w-11 ${item.tone}`}
+          >
+            <item.icon className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className={`truncate text-xs font-semibold sm:text-sm ${i === 0 ? "text-white/60" : "text-black/50"}`}>
+              {item.label}
+            </p>
+            <p className={`mt-0.5 font-space text-xl font-bold sm:text-2xl ${i === 0 ? "text-lime" : "text-ink"}`}>
               {item.value}
-            </span>
+            </p>
           </div>
         </div>
       ))}

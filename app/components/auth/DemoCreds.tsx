@@ -7,7 +7,7 @@ import {
   ChevronDown,
   ChevronUp,
   TestTube2,
-} from "lucide-react";
+} from "@/components/icons";
 
 interface DemoCredsProps {
   onFillDemo: (demoData: any) => void;

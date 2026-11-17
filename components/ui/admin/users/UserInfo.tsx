@@ -1,136 +1,124 @@
 "use client"
-import React from 'react'
+import React, { useEffect } from 'react'
+import { motion } from "framer-motion"
+import { BadgeCheck, Ban, CircleCheck, Loader2, Mail, Phone, UserLock, X, XCircle } from '@/components/icons';
+import { formatMoney } from '@/lib/money';
+import { alertAnimation } from '../Animations';
+import { btnDanger, btnPrimary, btnSecondary, monoLabel } from '../ui';
+import { RolePill, StatusPills, UserAvatar } from './columns';
+import { AdminUser, UserActionHandlers, formatDate, storeName } from './types';
 
+interface UserInfoProps extends UserActionHandlers {
+  user?: AdminUser | null
+  onClose?: () => void
+}
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+function UserInfo({ user, onClose, onToggleVerify, onRequest, busyId }: UserInfoProps) {
+  useEffect(() => {
+    if (!onClose) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose])
 
-import { useAdminContext } from '../AdminContext';
-import { IoCalendarClearOutline } from 'react-icons/io5';
-import { Mail } from 'lucide-react';
-import {motion} from "framer-motion"
-import { alertAnimation, others } from '../Animations';
+  if (!user) return null
+  const busy = busyId === user.id
+  const role = (user.role || "").toLowerCase()
+  const store = storeName(user.store)
 
-function UserInfo() {
-    const {setShowUserInfo, selectedUser, projects} = useAdminContext();
-    /*const projectsWorkingOn = projects.filter((project:any)=>{
-      if(selectedUser.projectsWorkingOnId.find((id:string)=> id===project.id)){ 
-        return project
-      }
-    })
+  const fields: { label: string; value: React.ReactNode }[] = [
+    { label: "Role", value: <RolePill role={user.role} /> },
+    { label: "Status", value: <StatusPills user={user} /> },
+    { label: "Email", value: user.email ? <a href={`mailto:${user.email}`} className="break-all font-medium text-ink underline-offset-2 hover:underline">{user.email}</a> : "—" },
+    { label: "Phone", value: user.phone ? <a href={`tel:${user.phone}`} className="font-medium text-ink underline-offset-2 hover:underline">{user.phone}</a> : "—" },
+    ...(role === "customer"
+      ? [
+          { label: "Orders", value: <span className="font-space font-bold">{(user.orders ?? 0).toLocaleString("en-NG")}</span> },
+          { label: "Total spent", value: <span className="font-space font-bold">{formatMoney(user.spent ?? 0, "ngn")}</span> },
+        ]
+      : []),
+    ...(role === "seller" || store ? [{ label: "Store", value: store ?? "No store yet" }] : []),
+    { label: "Joined", value: formatDate(user.createdAt, true) },
+    { label: "Last updated", value: formatDate(user.updatedAt, true) },
+    { label: "User ID", value: <span className="break-all font-space text-xs">{user.id}</span> },
+  ]
 
-    const completedProjects = projects.filter((project:any)=>{
-      if(selectedUser.projectsCompletedId.find((id:string)=> id===project.id)){ 
-        return project
-      }
-    })*/
-
-    //console.log("Projects Working On:", projectsWorkingOn);
   return (
-    <div className='fixed backdrop-blur-[20px] z-10 inset-0 flex items-center justify-end'>
-        <motion.div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      onClick={onClose}
+      className='fixed inset-0 z-50 flex justify-end bg-ink/50 font-mont backdrop-blur-sm'
+    >
+      <motion.aside
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Details for ${user.name}`}
         initial={alertAnimation.initial}
         exit={alertAnimation.initial}
         animate={alertAnimation.animate}
-        transition={{
-        duration: 0.3,
-        ease:"easeInOut"
-        }}
-        className='w-full h-full  md:w-[50vw]'
-        >
-          <Card className='w-full h-full rounded-none md:rounded-lg rounded-tr-none md:w-[50vw] '>
-            <CardHeader>
-                <CardTitle>User Information</CardTitle>
-                <CardDescription>Details about {selectedUser.name}</CardDescription>
-            </CardHeader>
-            <CardContent className='flex gap-3 flex-col overflow-y-auto w-full'>
-                {/*Basic Info */}
-                <Card className='w-full shadow-none'>
-                  <CardHeader>
-                    <CardTitle>User Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className='flex flex-col gap-2'>
-                    <div className='flex items-start gap-2'>
-                      {selectedUser.pfp?<img src={selectedUser.pfp} alt={selectedUser.name} className="w-15 h-15 rounded-full mb-4 object-cover"/>:
-                        <span className='w-15 h-15 rounded-full bg-gray-200 flex items-center justify-center text-3xl text-gray-500 mb-4'>{selectedUser.name.charAt(0).toUpperCase()}</span>
-                      }
-                      <div className='flex flex-col gap-1'>
-                        <span className='font-semibold text-lg'>{selectedUser.name}</span>
-                        <span className='flex items-center gap-1'><Mail className='w-4 h-4' />{selectedUser.email}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        onClick={(e) => e.stopPropagation()}
+        className='flex h-full w-full flex-col overflow-hidden bg-white shadow-[0_0_80px_-20px_rgba(12,17,14,0.5)] sm:max-w-md sm:rounded-l-3xl lg:max-w-lg'
+      >
+        <div className='flex items-start justify-between gap-3 border-b border-black/5 p-5 sm:px-6'>
+          <div className='min-w-0'>
+            <h2 className='text-lg font-extrabold tracking-[-0.02em] text-ink'>User details</h2>
+            <p className='truncate text-sm text-black/55'>Account information and admin actions.</p>
+          </div>
+          <button type='button' aria-label='Close' onClick={onClose} className='inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-cream text-ink transition-colors hover:bg-lime'><X size={18} /></button>
+        </div>
 
-                {/* Projects Working On }
-                <h1 className='text-start font-noto text-2xl'>Active Projects</h1>
-                {projectsWorkingOn.length!=0? projectsWorkingOn.map((project:any, index:number) => (
-                <Project key={index} name={project.name} client={project.client} progress={project.progress} date={project.date} status={project.status} />
-            )): <p className='w-full h-full flex items-center justify-center'>No Active Projects</p>}
+        <div className='flex flex-1 flex-col gap-4 overflow-y-auto p-5 sm:p-6'>
+          <div className='surface-card p-5'>
+            <div className='flex items-center gap-4'>
+              <UserAvatar user={user} size="lg" />
+              <div className='flex min-w-0 flex-col gap-1'>
+                <span className='truncate text-lg font-extrabold tracking-[-0.02em] text-ink'>{user.name || "Unnamed user"}</span>
+                <span className='flex min-w-0 items-center gap-1.5 text-sm text-black/55'><Mail className='h-4 w-4 shrink-0' /><span className='truncate'>{user.email}</span></span>
+                {user.phone && <span className='flex min-w-0 items-center gap-1.5 text-sm text-black/55'><Phone className='h-4 w-4 shrink-0' /><span className='truncate'>{user.phone}</span></span>}
+              </div>
+            </div>
+            <dl className='mt-5 grid grid-cols-1 gap-4 border-t border-black/5 pt-4 text-sm min-[400px]:grid-cols-2'>
+              {fields.map((f) => (
+                <div key={f.label} className='min-w-0'>
+                  <dt className={monoLabel}>{f.label}</dt>
+                  <dd className='mt-1 text-ink'>{f.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
 
-                {/* Completed Projects *}
-                <h1 className='text-start font-noto text-2xl mt-4'>Completed Projects</h1>
-                {completedProjects.length!=0? completedProjects.map((project:any, index:number) => (
-                <Project key={index} name={project.name} client={project.client} progress={project.progress} date={project.date} status={project.status} />
-            )): <p className='w-full h-full flex items-center justify-center'>No Completed Projects</p>}
-            */}
-            </CardContent>
-            <CardFooter className='flex mt-auto flex-col md:flex-row gap-3'>
-                <button onClick={() => setShowUserInfo(false)} className='bg-emerald-700 text-white w-full p-3 rounded-lg cursor-pointer'>Close</button>
-            </CardFooter>
-        </Card>
-        </motion.div>
-    </div>
+          <div className='surface-card flex flex-col gap-3 p-5'>
+            <p className={monoLabel}>Admin actions</p>
+            <div className='grid grid-cols-1 gap-2 min-[400px]:grid-cols-2'>
+              <button type='button' disabled={busy} onClick={() => onToggleVerify?.(user)} className={btnSecondary}>
+                {busy ? <Loader2 size={16} className='animate-spin' /> : user.isVerified ? <XCircle size={16} /> : <BadgeCheck size={16} />}
+                {user.isVerified ? "Unverify" : "Verify"}
+              </button>
+              <button type='button' disabled={busy} onClick={() => onRequest?.({ kind: "role", user })} className={btnSecondary}>
+                <UserLock size={16} />Change role
+              </button>
+              <button
+                type='button'
+                disabled={busy}
+                onClick={() => onRequest?.({ kind: user.isActive ? "deactivate" : "activate", user })}
+                className={`${user.isActive ? btnDanger : btnPrimary} min-[400px]:col-span-2`}
+              >
+                {user.isActive ? <><Ban size={16} />Deactivate account</> : <><CircleCheck size={16} />Activate account</>}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className='border-t border-black/5 p-4 sm:px-6'>
+          <button type='button' onClick={onClose} className={`${btnSecondary} w-full`}>Close</button>
+        </div>
+      </motion.aside>
+    </motion.div>
   )
 }
 
 export default UserInfo
-
-
-
-
-
-
-interface ProjectProps{
-    name: string
-    client: string
-    progress: string
-    date: string
-    status: string
-}
-
-
-function Project({name, client, progress, date, status}: ProjectProps){
-    return (
-        <Card className='shadow-none bg-gray-100/80 w-full'>
-            <CardHeader>
-                <CardTitle className='flex items-center justify-between gap-3'>
-                    {name}
-                    <span className={`${status==="In Progress"?"bg-blue-300/50":status==="Completed"?"bg-green-300/50":"bg-red-300/50"} p-1 px-2 rounded-lg ${status==="In Progress"?"text-blue-900":status==="Completed"?"text-green-900":"text-red-900"}`}>{status}</span>
-                </CardTitle>
-                <CardDescription>{client}</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className='flex flex-col'>
-                    <div className='flex items-center justify-between gap-3'>
-                        <span>Progress</span>
-                        <span>{progress}</span>
-                    </div>
-                    <div className='mt-2 w-full h-[10px] flex items-center rounded-lg bg-gray-200'>
-                        <span style={{width: progress}} className={`flex rounded-lg h-full bg-blue-500 transition-w duration-300 ease-in-out`} />
-                    </div>
-                    <div className='flex items-center mt-4 gap-2'>
-                        <IoCalendarClearOutline />
-                        <span>{date}</span>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-    )
-}

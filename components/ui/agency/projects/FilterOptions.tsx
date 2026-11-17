@@ -1,135 +1,71 @@
 "use client"
-import React, { useEffect, useState } from 'react'
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { IconAdjustmentsHorizontal, IconSearch } from '@tabler/icons-react'
-import { useAgencyContext } from '../AgencyContext';
+import React from 'react'
+import { Search, X } from '@/components/icons'
+import { searchInput } from '../ui'
+import { FILTERS, type ProjectFilter } from './types'
 
+interface Props {
+  filter: ProjectFilter
+  setFilter: (f: ProjectFilter) => void
+  search: string
+  setSearch: (s: string) => void
+  counts: Record<ProjectFilter, number>
+}
 
-function FilterOptions() {
-    const {projects, setProjects, setIsSearchingProjects, setprojectsSearchResults} = useAgencyContext()
-
-        const [filterValue, setFilterValue] = useState("")
-  
-      function handleSearch(value:string){
-          setIsSearchingProjects(true)
-          let newProjects
-          /*if(!isFilteringAgentsTable){
-            newProjects = projects.filter((project:any)=>{
-              if(project.name.toLowerCase().includes(value.toLowerCase())){
-                  return project
-              }
-          })
-        }else{
-          newProjects = projectsSearchResults.filter((project:any)=>{
-              if(project.name.toLowerCase().includes(value.toLowerCase())){
-                  return project
-              }
-          })
-        }*/
-       newProjects = projects.filter((project:any)=>{
-              if(project.name.toLowerCase().includes(value.toLowerCase())){
-                  return project
-              }
-          })
-          setprojectsSearchResults(newProjects)
-  }
-  
-  function handleFilter(value:string){
-         setIsSearchingProjects(true)
-          let newProjects
-         /* if(!isSearchingProjects){
-            newProjects = projects.filter((project:any)=>{
-              if(project.status.toLowerCase() === value.toLowerCase()){
-                  return project
-              }
-          })
-        }else{
-          newProjects = projectsSearchResults.filter((project:any)=>{
-              if(project.status.toLowerCase() === value.toLowerCase()){
-                  return project
-              }
-          })
-        }*/
-       newProjects = projects.filter((project:any)=>{
-              if(project.status.toLowerCase() === value.toLowerCase()){
-                  return project
-              }
-          })
-        setprojectsSearchResults(newProjects)
-  }
-  
-    useEffect(()=>{
-        if(filterValue==="all"){
-          setIsSearchingProjects(false)
-        }else if(!filterValue){
-          return
-        } else{
-          handleFilter(filterValue)
-        }
-      }, [filterValue])
-
+function FilterOptions({ filter, setFilter, search, setSearch, counts }: Props) {
   return (
-    <div className="bg-white border border-emerald-500/20 rounded-md p-4 cursor-pointer ">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search Projects..."
-                onChange={e=>{handleSearch(e.target.value)}}
-                className="w-full bg-gray-50 shadow-none border-gray-200 rounded-sm text-gray-900 placeholder-gray-400 pl-11 pr-4 py-2.5 h-9 focus:outline-none"
-              />
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap gap-3">
-              {/* Status Filter */}
-              <Select value={filterValue} onValueChange={setFilterValue}>
-                <SelectTrigger className="flex-1 w-[160px] h-9 font-mont bg-gray-50 border-gray-200 rounded-sm">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="in progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Date Range Filter */}
-              <Select >
-                <SelectTrigger className="flex-1 w-[160px] h-9 bg-gray-50 border-gray-200 rounded-sm">
-                  <SelectValue placeholder="Date Range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="7days">Last 7 Days</SelectItem>
-                  <SelectItem value="30days">Last 30 Days</SelectItem>
-                  <SelectItem value="3months">Last 3 Months</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-
+    <div className='surface-card flex min-w-0 flex-col gap-3 p-3 sm:p-4 xl:flex-row xl:items-center xl:justify-between'>
+      <div
+        role='tablist'
+        aria-label='Filter projects by status'
+        className='-mx-1 flex min-w-0 gap-1 overflow-x-auto px-1 pb-1 xl:pb-0'
+      >
+        {FILTERS.map((f) => {
+          const active = filter === f.value
+          return (
+            <button
+              key={f.value}
+              type='button'
+              role='tab'
+              aria-selected={active}
+              onClick={() => setFilter(f.value)}
+              className={`inline-flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-full px-4 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink ${
+                active ? 'bg-ink text-white' : 'bg-cream text-ink hover:bg-lime'
+              }`}
+            >
+              {f.label}
+              <span
+                className={`rounded-full px-1.5 py-0.5 font-space text-[11px] ${active ? 'bg-lime text-ink' : 'bg-white text-black/60'}`}
+              >
+                {counts[f.value]}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      <div className='relative w-full xl:max-w-sm'>
+        <label htmlFor='projects-search' className='sr-only'>Search projects</label>
+        <Search className='pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40' />
+        <input
+          id='projects-search'
+          type='search'
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder='Search customer or service…'
+          className={`${searchInput} pl-10 pr-10`}
+        />
+        {search && (
+          <button
+            type='button'
+            onClick={() => setSearch('')}
+            aria-label='Clear search'
+            className='absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-black/50 hover:bg-cream hover:text-ink'
+          >
+            <X className='h-4 w-4' />
+          </button>
+        )}
+      </div>
+    </div>
   )
 }
 

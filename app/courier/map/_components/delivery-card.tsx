@@ -1,233 +1,174 @@
 "use client";
 
 import {
+  IconBuildingStore,
   IconMapPin,
-  IconPhone,
   IconNavigation,
   IconPackage,
-  IconClock,
-  IconCurrencyNaira,
-  IconChevronRight,
-  IconCheck,
-  IconX,
-} from "@tabler/icons-react";
-import { Button } from "@/components/ui/button";
-import { DeliveryPoint } from "./delivery-map";
+  IconPhone,
+} from "@/components/icons";
+import { formatMoney } from "@/lib/money";
 
-interface DeliveryCardProps {
-  delivery: DeliveryPoint;
-  isSelected: boolean;
-  onSelect: () => void;
-  onNavigate: () => void;
-  onCall?: () => void;
-  onComplete?: () => void;
-  onCancel?: () => void;
-  showActions?: boolean;
+export type DeliveryStatus = "pending" | "assigned" | "picked_up" | "in_transit" | "delivered" | "failed";
+
+/** Shape returned by courierApi.deliveries() — see services/courier.js. */
+export interface CourierDelivery {
+  id: string;
+  status: DeliveryStatus;
+  fee: number;
+  distanceKm: number | null;
+  estimatedMinutes: number | null;
+  order: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    total: number;
+    trackingNumber: string | null;
+    notes: string | null;
+    itemCount: number;
+    items: { name: string; quantity: number }[];
+  } | null;
+  pickup: { name: string | null; logo: string | null; address: string | null; phone: string | null } | null;
+  dropoff: { name: string | null; phone: string | null; address: string | null; area: string | null } | null;
+  pickedUpAt: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
-const DeliveryCard = ({
-  delivery,
-  isSelected,
-  onSelect,
-  onNavigate,
-  onCall,
-  onComplete,
-  onCancel,
-  showActions = true,
-}: DeliveryCardProps) => {
-  const isPickup = delivery.type === "pickup";
-  const isCompleted = delivery.status === "completed";
-  const isUrgent = delivery.isUrgent;
+const STATUS: Record<DeliveryStatus, { label: string; cls: string }> = {
+  pending: { label: "Open", cls: "bg-cream-dark text-ink" },
+  assigned: { label: "Go to pickup", cls: "bg-amber-100 text-amber-800" },
+  picked_up: { label: "Picked up", cls: "bg-ink text-lime" },
+  in_transit: { label: "On the way", cls: "bg-ink text-lime" },
+  delivered: { label: "Delivered", cls: "bg-lime text-ink" },
+  failed: { label: "Failed", cls: "bg-red-100 text-red-700" },
+};
 
+export const directionsUrl = (address: string) =>
+  `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+
+const telHref = (phone: string) => `tel:${phone.replace(/\s+/g, "")}`;
+
+function Stop({
+  kind,
+  title,
+  address,
+  phone,
+  isNext,
+}: {
+  kind: "pickup" | "dropoff";
+  title: string;
+  address: string | null;
+  phone: string | null;
+  isNext: boolean;
+}) {
+  const Icon = kind === "pickup" ? IconBuildingStore : IconMapPin;
   return (
-    <div
-      onClick={onSelect}
-      className={`
-        relative p-4 rounded-xl cursor-pointer transition-all duration-300 group
-        ${
-          isSelected
-            ? "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30 scale-[1.02]"
-            : "bg-white hover:bg-gray-50 border border-gray-200 hover:border-emerald-200 hover:shadow-md"
-        }
-        ${isCompleted ? "opacity-60" : ""}
-      `}
-    >
-      {/* Urgent Badge */}
-      {isUrgent && !isCompleted && (
-        <div className="absolute -top-2 -right-2 px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse shadow-lg">
-          URGENT
+    <div className={`rounded-2xl p-3 ${isNext ? "bg-lime/40 ring-1 ring-lime-dark/40" : "bg-cream"}`}>
+      <div className="flex items-start gap-3">
+        <div
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+            kind === "pickup" ? "bg-ink text-lime" : "bg-lime text-ink"
+          }`}
+        >
+          <Icon className="h-4 w-4" />
         </div>
-      )}
-
-      {/* Completed Badge */}
-      {isCompleted && (
-        <div className="absolute -top-2 -right-2 px-2 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full flex items-center gap-1">
-          <IconCheck className="w-3 h-3" />
-          Done
+        <div className="min-w-0 flex-1">
+          <p className="font-space text-[10px] uppercase tracking-widest text-black/45">
+            {kind === "pickup" ? "Pickup" : "Drop-off"}
+            {isNext && <span className="ml-1.5 font-bold text-ink">· Next stop</span>}
+          </p>
+          <p className="truncate text-sm font-bold text-ink">{title}</p>
+          <p className="text-sm text-black/60">{address || "Address not available"}</p>
         </div>
-      )}
-
-      {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div
-            className={`p-2 rounded-lg ${
-              isSelected
-                ? "bg-white/20"
-                : isPickup
-                ? "bg-blue-100"
-                : "bg-emerald-100"
+      </div>
+      <div className="mt-3 flex gap-2">
+        {address ? (
+          <a
+            href={directionsUrl(address)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-sm font-bold transition-colors ${
+              isNext ? "bg-ink text-white hover:bg-ink-soft" : "border-2 border-ink/15 bg-white text-ink hover:border-ink"
             }`}
           >
-            {isPickup ? (
-              <IconPackage
-                className={`w-5 h-5 ${
-                  isSelected ? "text-white" : "text-blue-600"
-                }`}
-              />
-            ) : (
-              <IconMapPin
-                className={`w-5 h-5 ${
-                  isSelected ? "text-white" : "text-emerald-600"
-                }`}
-              />
-            )}
-          </div>
-          <div>
-            <span
-              className={`text-xs font-semibold uppercase tracking-wide ${
-                isSelected ? "text-emerald-100" : "text-gray-500"
-              }`}
-            >
-              {isPickup ? "Pickup" : "Dropoff"}
-            </span>
-            <h3
-              className={`font-bold ${
-                isSelected ? "text-white" : "text-gray-900"
-              }`}
-            >
-              {delivery.name}
-            </h3>
-          </div>
+            <IconNavigation className="h-4 w-4" />
+            Navigate
+          </a>
+        ) : (
+          <span className="inline-flex h-11 flex-1 items-center justify-center rounded-full bg-white/60 text-sm font-semibold text-black/40">
+            No address
+          </span>
+        )}
+        {phone && (
+          <a
+            href={telHref(phone)}
+            aria-label={`Call ${kind === "pickup" ? "store" : "customer"}`}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-ink/15 bg-white text-ink transition-colors hover:border-ink"
+          >
+            <IconPhone className="h-4 w-4" />
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function DeliveryCard({ delivery }: { delivery: CourierDelivery }) {
+  const status = STATUS[delivery.status] || STATUS.assigned;
+  const headingToDropoff = delivery.status === "picked_up" || delivery.status === "in_transit";
+  const dropoffAddress =
+    [delivery.dropoff?.address, delivery.dropoff?.area].filter(Boolean).join(", ") || null;
+  const items = delivery.order?.items ?? [];
+  const itemCount = delivery.order?.itemCount ?? items.reduce((n, i) => n + (i.quantity || 0), 0);
+
+  return (
+    <article className="rounded-3xl bg-white p-4 ring-1 ring-black/5">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <span className={`inline-flex rounded-full px-2.5 py-0.5 font-space text-[10px] font-bold uppercase tracking-widest ${status.cls}`}>
+            {status.label}
+          </span>
+          <h3 className="mt-1.5 truncate font-space text-base font-bold text-ink">
+            {delivery.order?.orderNumber ? `Order ${delivery.order.orderNumber}` : "Delivery"}
+          </h3>
+          {itemCount > 0 && (
+            <p className="flex items-center gap-1.5 truncate text-xs text-black/55">
+              <IconPackage className="h-3.5 w-3.5 shrink-0" />
+              {itemCount} item{itemCount === 1 ? "" : "s"}
+              {items[0]?.name ? ` · ${items[0].name}${items.length > 1 ? ` +${items.length - 1} more` : ""}` : ""}
+            </p>
+          )}
         </div>
-        <IconChevronRight
-          className={`w-5 h-5 transition-transform ${
-            isSelected
-              ? "text-white rotate-90"
-              : "text-gray-400 group-hover:translate-x-1"
-          }`}
+        <div className="shrink-0 text-right">
+          <p className="font-space text-[10px] uppercase tracking-widest text-black/45">Fee</p>
+          <p className="font-space text-base font-bold text-emerald-700">{formatMoney(delivery.fee, "ngn")}</p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Stop
+          kind="pickup"
+          title={delivery.pickup?.name || "Store"}
+          address={delivery.pickup?.address ?? null}
+          phone={delivery.pickup?.phone ?? null}
+          isNext={!headingToDropoff}
+        />
+        <Stop
+          kind="dropoff"
+          title={delivery.dropoff?.name || "Customer"}
+          address={dropoffAddress}
+          phone={delivery.dropoff?.phone ?? null}
+          isNext={headingToDropoff}
         />
       </div>
 
-      {/* Address */}
-      <p
-        className={`text-sm mb-3 ${
-          isSelected ? "text-emerald-100" : "text-gray-600"
-        }`}
-      >
-        {delivery.address}
-      </p>
-
-      {/* Info Row */}
-      <div className="flex flex-wrap items-center gap-3 mb-3">
-        {delivery.estimatedTime && (
-          <div
-            className={`flex items-center gap-1 text-xs font-medium ${
-              isSelected ? "text-white" : "text-gray-600"
-            }`}
-          >
-            <IconClock className="w-3.5 h-3.5" />
-            {delivery.estimatedTime}
-          </div>
-        )}
-        {delivery.earnings && (
-          <div
-            className={`flex items-center gap-1 text-xs font-bold ${
-              isSelected ? "text-white" : "text-emerald-600"
-            }`}
-          >
-            <IconCurrencyNaira className="w-3.5 h-3.5" />
-            {delivery.earnings}
-          </div>
-        )}
-      </div>
-
-      {/* Actions */}
-      {showActions && !isCompleted && (
-        <div
-          className={`flex gap-2 mt-3 pt-3 border-t ${
-            isSelected ? "border-white/20" : "border-gray-100"
-          }`}
-        >
-          <Button
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onNavigate();
-            }}
-            className={`flex-1 ${
-              isSelected
-                ? "bg-white text-emerald-600 hover:bg-emerald-50"
-                : "bg-emerald-600 text-white hover:bg-emerald-700"
-            }`}
-          >
-            <IconNavigation className="w-4 h-4 mr-1" />
-            Navigate
-          </Button>
-
-          {delivery.phone && onCall && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={(e) => {
-                e.stopPropagation();
-                onCall();
-              }}
-              className={`${
-                isSelected
-                  ? "border-white/40 text-white hover:bg-white/10"
-                  : "border-gray-200"
-              }`}
-            >
-              <IconPhone className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
+      {delivery.order?.notes && (
+        <p className="mt-3 rounded-2xl bg-cream/70 px-3 py-2 text-xs text-black/60">
+          <span className="font-semibold text-ink">Note:</span> {delivery.order.notes}
+        </p>
       )}
-
-      {/* Completion Actions */}
-      {showActions && isSelected && !isCompleted && (
-        <div className="flex gap-2 mt-3">
-          {onComplete && (
-            <Button
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onComplete();
-              }}
-              className="flex-1 bg-white text-emerald-600 hover:bg-emerald-50"
-            >
-              <IconCheck className="w-4 h-4 mr-1" />
-              Mark Complete
-            </Button>
-          )}
-          {onCancel && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                onCancel();
-              }}
-              className="text-white/80 hover:bg-white/10 hover:text-white"
-            >
-              <IconX className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
+    </article>
   );
-};
-
-export default DeliveryCard;
+}

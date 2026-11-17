@@ -19,55 +19,171 @@ import {
 } from "@/components/ui/tooltip";
 import {
   IconBan,
+  IconCheck,
   IconChecks,
+  IconCircleCheck,
   IconCircleDot,
   IconClock,
   IconCopy,
   IconEye,
-  IconFileText,
   IconMessageCircle,
   IconPackage,
   IconRefresh,
   IconTruck,
   IconUxCircle,
-} from "@tabler/icons-react";
-import { MoreHorizontal, RefreshCw } from "lucide-react";
+  Loader,
+  MoreHorizontal,
+  type LucideIcon,
+} from "@/components/icons";
+import { useMoney } from "@/app/mystore/_components/currency";
+
+// ------------------------------------------------------------
+// Types (mirror the /api/seller/orders response)
+// ------------------------------------------------------------
+
+export type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "completed"
+  | "cancelled"
+  | "refunded";
+
+export type PaymentStatus = "escrow" | "paid" | "refunded" | "pending";
+
+export interface OrderItem {
+  id: string;
+  productId: string | null;
+  name: string;
+  sku: string | null;
+  image: string | null;
+  quantity: number;
+  price: number;
+  total: number;
+}
 
 export interface Order {
   id: string;
-  date: string;
-  time: string;
+  orderNumber: string;
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  escrow: {
+    status: string | null;
+    amount: number | null;
+    heldAt: string | null;
+    releasedAt: string | null;
+    refundedAt: string | null;
+  } | null;
   customer: {
-    name: string;
-    avatar?: string;
-  };
-  items: {
-    count: number;
-    names: string[];
-    thumbnails?: string[];
-  };
+    id: string | null;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    avatar: string | null;
+  } | null;
+  items: OrderItem[];
+  subtotal: number;
+  shippingFee: number;
+  tax: number;
   total: number;
-  paymentStatus: "paid" | "escrow" | "pending" | "failed" | "refunded";
-  orderStatus:
-    | "pending"
-    | "processing"
-    | "shipped"
-    | "delivered"
-    | "cancelled"
-    | "refund";
+  shipping: {
+    name: string | null;
+    phone: string | null;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+    zip: string | null;
+    country: string | null;
+  } | null;
+  trackingNumber: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+  /** Escro courier delivery, when one exists for this order. */
+  delivery?: {
+    id: string;
+    status: "pending" | "assigned" | "picked_up" | "in_transit" | "delivered" | "failed";
+    pickedUpAt: string | null;
+    deliveredAt: string | null;
+    courier: { name: string; phone: string | null; vehicle: string | null } | null;
+  } | null;
 }
 
-interface OrdersTableProps {
-  orders: Order[];
-  onViewDetails: (order: Order) => void;
+export interface OrderStats {
+  total: number;
+  pending: number;
+  completed: number;
+  cancelled: number;
 }
 
-const paymentStatusConfig = {
+/** Status changes a seller is allowed to make (mirrors the backend). */
+export type OrderAction = "confirmed" | "processing" | "shipped" | "cancelled";
+
+export const SELLER_TRANSITIONS: Partial<Record<OrderStatus, OrderAction[]>> = {
+  pending: ["confirmed", "processing", "cancelled"],
+  confirmed: ["processing", "cancelled"],
+  processing: ["shipped", "cancelled"],
+};
+
+export const getAllowedActions = (order: Order): OrderAction[] =>
+  SELLER_TRANSITIONS[order.status] ?? [];
+
+export const actionConfig: Record<
+  OrderAction,
+  { label: string; icon: LucideIcon; danger?: boolean }
+> = {
+  confirmed: { label: "Confirm order", icon: IconCheck },
+  processing: { label: "Start processing", icon: IconCircleDot },
+  shipped: { label: "Mark as shipped", icon: IconTruck },
+  cancelled: { label: "Cancel order", icon: IconUxCircle, danger: true },
+};
+
+// ------------------------------------------------------------
+// Display helpers
+// ------------------------------------------------------------
+
+const toDate = (iso: string | null | undefined) => {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+export const formatOrderDate = (iso: string | null | undefined) => {
+  const d = toDate(iso);
+  return d
+    ? d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : "—";
+};
+
+export const formatOrderTime = (iso: string | null | undefined) => {
+  const d = toDate(iso);
+  return d ? d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
+};
+
+export const getCustomerName = (order: Order) =>
+  order.customer?.name?.trim() || order.shipping?.name?.trim() || "Customer";
+
+export const getInitials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0]?.toUpperCase())
+    .join("") || "?";
+
+export const getItemCount = (order: Order) =>
+  (order.items ?? []).reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+
+type PillConfig = { label: string; bgColor: string; textColor: string };
+
+export const paymentStatusConfig: Record<string, PillConfig & { dotColor: string }> = {
   paid: {
     label: "Paid",
-    bgColor: "bg-green-100",
-    textColor: "text-green-700",
-    dotColor: "bg-green-500",
+    bgColor: "bg-emerald-100",
+    textColor: "text-emerald-700",
+    dotColor: "bg-emerald-500",
   },
   escrow: {
     label: "Escrow",
@@ -77,30 +193,38 @@ const paymentStatusConfig = {
   },
   pending: {
     label: "Pending",
-    bgColor: "bg-blue-100",
-    textColor: "text-blue-700",
-    dotColor: "bg-blue-500",
-  },
-  failed: {
-    label: "Failed",
-    bgColor: "bg-red-100",
-    textColor: "text-red-700",
-    dotColor: "bg-red-500",
+    bgColor: "bg-cream-dark",
+    textColor: "text-black/70",
+    dotColor: "bg-black/35",
   },
   refunded: {
     label: "Refunded",
-    bgColor: "bg-gray-100",
-    textColor: "text-gray-700",
-    dotColor: "bg-gray-500",
+    bgColor: "bg-cream-dark",
+    textColor: "text-black/60",
+    dotColor: "bg-black/35",
   },
 };
 
-const orderStatusConfig = {
+export const getPaymentConfig = (status: string | null | undefined) =>
+  paymentStatusConfig[status ?? ""] ?? {
+    label: status ? status.charAt(0).toUpperCase() + status.slice(1) : "Unknown",
+    bgColor: "bg-cream-dark",
+    textColor: "text-black/60",
+    dotColor: "bg-black/35",
+  };
+
+export const orderStatusConfig: Record<OrderStatus, PillConfig & { icon: LucideIcon }> = {
   pending: {
     label: "Pending",
-    bgColor: "bg-blue-100",
-    textColor: "text-blue-700",
+    bgColor: "bg-cream-dark",
+    textColor: "text-black/70",
     icon: IconClock,
+  },
+  confirmed: {
+    label: "Confirmed",
+    bgColor: "bg-violet-100",
+    textColor: "text-violet-700",
+    icon: IconCheck,
   },
   processing: {
     label: "Processing",
@@ -110,15 +234,21 @@ const orderStatusConfig = {
   },
   shipped: {
     label: "Shipped",
-    bgColor: "bg-purple-100",
-    textColor: "text-purple-700",
+    bgColor: "bg-sky-100",
+    textColor: "text-sky-700",
     icon: IconPackage,
   },
   delivered: {
     label: "Delivered",
-    bgColor: "bg-green-100",
-    textColor: "text-green-700",
+    bgColor: "bg-emerald-100",
+    textColor: "text-emerald-700",
     icon: IconChecks,
+  },
+  completed: {
+    label: "Completed",
+    bgColor: "bg-lime",
+    textColor: "text-ink",
+    icon: IconCircleCheck,
   },
   cancelled: {
     label: "Cancelled",
@@ -126,85 +256,201 @@ const orderStatusConfig = {
     textColor: "text-red-700",
     icon: IconBan,
   },
-  refund: {
-    label: "Return/Refund",
+  refunded: {
+    label: "Refunded",
     bgColor: "bg-orange-100",
     textColor: "text-orange-700",
     icon: IconRefresh,
   },
 };
 
-const OrdersTable = ({ orders, onViewDetails }: OrdersTableProps) => {
+export const getStatusConfig = (status: string) =>
+  orderStatusConfig[status as OrderStatus] ?? {
+    label: status ? status.charAt(0).toUpperCase() + status.slice(1) : "Unknown",
+    bgColor: "bg-cream-dark",
+    textColor: "text-black/70",
+    icon: IconClock,
+  };
+
+// ------------------------------------------------------------
+// Table
+// ------------------------------------------------------------
+
+interface OrdersTableProps {
+  orders: Order[];
+  onViewDetails: (order: Order) => void;
+  onAction: (order: Order, action: OrderAction) => void;
+  busyId?: string | null;
+}
+
+const menuClass =
+  "w-56 rounded-3xl border-black/5 p-2 font-mont shadow-xl shadow-black/10 [&_[role=menuitem]]:rounded-full [&_[role=menuitem]]:px-3 [&_[role=menuitem]]:py-2";
+
+const ItemThumbs = ({ order }: { order: Order }) => {
+  const withImages = (order.items ?? []).filter((i) => i.image).slice(0, 3);
+  if (withImages.length === 0) {
+    return (
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-cream ring-1 ring-black/5">
+        <IconPackage className="h-4 w-4 text-black/35" />
+      </div>
+    );
+  }
+  return (
+    <div className="flex shrink-0 -space-x-2">
+      {withImages.map((item) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={item.id}
+          src={item.image ?? ""}
+          alt={item.name}
+          className="h-8 w-8 rounded-xl bg-cream object-cover ring-2 ring-white"
+        />
+      ))}
+    </div>
+  );
+};
+
+const OrderActionsMenu = ({
+  order,
+  onViewDetails,
+  onAction,
+  busy,
+}: {
+  order: Order;
+  onViewDetails: (order: Order) => void;
+  onAction: (order: Order, action: OrderAction) => void;
+  busy: boolean;
+}) => {
+  const actions = getAllowedActions(order);
+  const forward = actions.filter((a) => a !== "cancelled");
+  const canCancel = actions.includes("cancelled");
+  const email = order.customer?.email;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-9 w-9 rounded-full p-0 text-black/55 hover:bg-ink hover:text-white"
+          aria-label="Order actions"
+          disabled={busy}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {busy ? (
+            <Loader className="h-4 w-4 animate-spin" />
+          ) : (
+            <MoreHorizontal className="h-4 w-4" />
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className={menuClass}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <DropdownMenuItem onSelect={() => onViewDetails(order)}>
+          <IconEye className="mr-2 h-4 w-4" />
+          View details
+        </DropdownMenuItem>
+        {email && (
+          <DropdownMenuItem asChild>
+            <a href={`mailto:${email}?subject=${encodeURIComponent(`Your order ${order.orderNumber}`)}`}>
+              <IconMessageCircle className="mr-2 h-4 w-4" />
+              Contact customer
+            </a>
+          </DropdownMenuItem>
+        )}
+        {forward.length > 0 && <DropdownMenuSeparator />}
+        {forward.map((action) => {
+          const cfg = actionConfig[action];
+          const Icon = cfg.icon;
+          return (
+            <DropdownMenuItem key={action} onSelect={() => onAction(order, action)}>
+              <Icon className="mr-2 h-4 w-4" />
+              {cfg.label}
+            </DropdownMenuItem>
+          );
+        })}
+        {canCancel && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-red-600 focus:text-red-700"
+              onSelect={() => onAction(order, "cancelled")}
+            >
+              <IconUxCircle className="mr-2 h-4 w-4" />
+              {actionConfig.cancelled.label}
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+const OrdersTable = ({ orders, onViewDetails, onAction, busyId }: OrdersTableProps) => {
+  const { format } = useMoney();
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const copyOrderId = (id: string) => {
-    navigator.clipboard.writeText(id);
-    setCopiedId(id);
+  const copyOrderNumber = (order: Order) => {
+    void navigator.clipboard?.writeText(order.orderNumber).catch(() => {});
+    setCopiedId(order.id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const th =
+    "px-5 py-4 text-left font-space text-[11px] font-normal uppercase tracking-widest text-black/45";
+
   return (
     <TooltipProvider>
-      <div className="bg-white border border-emerald-200 rounded-md overflow-hidden ">
+      <div className="surface-card overflow-hidden">
         {/* Desktop Table */}
-        <div className="hidden lg:block overflow-x-auto font-noto">
-          <table className="w-full">
-            <thead className="bg-emerald-500/10 border-b border-emerald-200">
+        <div className="hidden overflow-x-auto xl:block">
+          <table className="w-full min-w-[900px]">
+            <thead className="border-b border-black/5">
               <tr>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">
-                  Order ID
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">
-                  Date
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">
-                  Customer
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">
-                  Items
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">
-                  Total
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">
-                  Payment
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">
-                  Status
-                </th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">
-                  Actions
-                </th>
+                <th className={th}>Order ID</th>
+                <th className={th}>Date</th>
+                <th className={th}>Customer</th>
+                <th className={th}>Items</th>
+                <th className={th}>Total</th>
+                <th className={th}>Payment</th>
+                <th className={th}>Status</th>
+                <th className={th}>Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-emerald-100">
+            <tbody className="divide-y divide-black/5">
               {orders.map((order) => {
-                const paymentConfig = paymentStatusConfig[order.paymentStatus];
-                const statusConfig = orderStatusConfig[order.orderStatus];
+                const paymentConfig = getPaymentConfig(order.paymentStatus);
+                const statusConfig = getStatusConfig(order.status);
                 const StatusIcon = statusConfig.icon;
+                const name = getCustomerName(order);
+                const count = getItemCount(order);
 
                 return (
                   <tr
                     key={order.id}
-                    className="hover:bg-emerald-50 transition-colors cursor-pointer"
+                    className="cursor-pointer transition-colors hover:bg-cream/60"
                     onClick={() => onViewDetails(order)}
                   >
                     {/* Order ID */}
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold whitespace-nowrap text-emerald-600">
-                          #{order.id}
+                        <span className="whitespace-nowrap font-space text-sm font-bold text-ink">
+                          #{order.orderNumber}
                         </span>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                copyOrderId(order.id);
+                                copyOrderNumber(order);
                               }}
-                              className="p-1 hover:bg-emerald-100 rounded-md transition-colors"
+                              className="rounded-full p-1.5 text-black/40 transition-colors hover:bg-lime hover:text-ink"
+                              aria-label="Copy order ID"
                             >
-                              <IconCopy className="w-3.5 h-3.5 text-gray-400" />
+                              <IconCopy className="h-3.5 w-3.5" />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -215,133 +461,101 @@ const OrdersTable = ({ orders, onViewDetails }: OrdersTableProps) => {
                     </td>
 
                     {/* Date */}
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="text-sm font-medium text-emerald-900 whitespace-nowrap">
-                          {order.date}
-                        </p>
-                        <p className="text-xs text-emerald-500 whitespace-nowrap">
-                          {order.time}
-                        </p>
-                      </div>
+                    <td className="px-5 py-3.5">
+                      <p className="whitespace-nowrap font-space text-[13px] text-ink">
+                        {formatOrderDate(order.createdAt)}
+                      </p>
+                      <p className="whitespace-nowrap font-space text-[11px] text-black/40">
+                        {formatOrderTime(order.createdAt)}
+                      </p>
                     </td>
 
                     {/* Customer */}
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <Avatar className="w-8 h-8">
-                          <AvatarImage src={order.customer.avatar} />
-                          <AvatarFallback className="bg-emerald-100 text-emerald-700 text-xs font-medium">
-                            {order.customer.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
+                        <Avatar className="h-8 w-8">
+                          {order.customer?.avatar && (
+                            <AvatarImage src={order.customer.avatar} />
+                          )}
+                          <AvatarFallback className="bg-ink text-xs font-medium text-lime">
+                            {getInitials(name)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm font-medium text-emerald-900 ">
-                          {order.customer.name}
-                        </span>
+                        <div className="min-w-0">
+                          <p className="max-w-[180px] truncate text-sm font-semibold text-ink">
+                            {name}
+                          </p>
+                          {order.customer?.email && (
+                            <p className="max-w-[180px] truncate text-[11px] text-black/45">
+                              {order.customer.email}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </td>
 
                     {/* Items */}
-                    <td className="px-6 py-4">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="text-sm text-emerald-600 cursor-help whitespace-nowrap">
-                            {order.items.count} item
-                            {order.items.count > 1 ? "s" : ""}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs">
-                          <ul className="text-xs space-y-1">
-                            {order.items.names.map((name, i) => (
-                              <li key={i}>{name}</li>
-                            ))}
-                          </ul>
-                        </TooltipContent>
-                      </Tooltip>
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <ItemThumbs order={order} />
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="cursor-help whitespace-nowrap text-sm text-black/60 underline decoration-black/20 decoration-dotted underline-offset-4">
+                              {count} item{count === 1 ? "" : "s"}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            {order.items.length > 0 ? (
+                              <ul className="space-y-1 text-xs">
+                                {order.items.map((item) => (
+                                  <li key={item.id}>
+                                    {item.name} × {item.quantity}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <span className="text-xs">No items</span>
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                     </td>
 
                     {/* Total */}
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-semibold text-emerald-900">
-                        ${order.total.toFixed(2)}
+                    <td className="px-5 py-3.5">
+                      <span className="whitespace-nowrap font-space text-sm font-bold text-ink">
+                        {format(order.total)}
                       </span>
                     </td>
 
                     {/* Payment Status */}
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${paymentConfig.bgColor} ${paymentConfig.textColor}`}
+                        className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${paymentConfig.bgColor} ${paymentConfig.textColor}`}
                       >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${paymentConfig.dotColor}`}
-                        />
+                        <span className={`h-1.5 w-1.5 rounded-full ${paymentConfig.dotColor}`} />
                         {paymentConfig.label}
                       </span>
                     </td>
 
                     {/* Order Status */}
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusConfig.bgColor} ${statusConfig.textColor}`}
+                        className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${statusConfig.bgColor} ${statusConfig.textColor}`}
                       >
-                        <StatusIcon className="w-3.5 h-3.5" />
+                        <StatusIcon className="h-3.5 w-3.5" />
                         {statusConfig.label}
                       </span>
                     </td>
 
                     {/* Actions */}
-                    <td className="px-6 py-4">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onViewDetails(order);
-                            }}
-                          >
-                            <IconEye className="w-4 h-4 mr-2" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <IconTruck className="w-4 h-4 mr-2" />
-                            Track Order
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <IconMessageCircle className="w-4 h-4 mr-2" />
-                            Contact Customer
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <IconFileText className="w-4 h-4 mr-2" />
-                            Print Invoice
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          {order.orderStatus === "pending" && (
-                            <DropdownMenuItem className="text-red-600">
-                              <IconUxCircle className="w-4 h-4 mr-2" />
-                              Cancel Order
-                            </DropdownMenuItem>
-                          )}
-                          {order.orderStatus === "delivered" && (
-                            <DropdownMenuItem className="text-orange-600">
-                              <RefreshCw className="w-4 h-4 mr-2" />
-                              Initiate Refund
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <td className="px-5 py-3.5">
+                      <OrderActionsMenu
+                        order={order}
+                        onViewDetails={onViewDetails}
+                        onAction={onAction}
+                        busy={busyId === order.id}
+                      />
                     </td>
                   </tr>
                 );
@@ -351,102 +565,73 @@ const OrdersTable = ({ orders, onViewDetails }: OrdersTableProps) => {
         </div>
 
         {/* Mobile Cards */}
-        <div className="lg:hidden divide-y divide-gray-100">
+        <div className="divide-y divide-black/5 xl:hidden">
           {orders.map((order) => {
-            const paymentConfig = paymentStatusConfig[order.paymentStatus];
-            const statusConfig = orderStatusConfig[order.orderStatus];
+            const paymentConfig = getPaymentConfig(order.paymentStatus);
+            const statusConfig = getStatusConfig(order.status);
             const StatusIcon = statusConfig.icon;
+            const name = getCustomerName(order);
+            const count = getItemCount(order);
+            const names = order.items.map((i) => i.name).join(", ");
 
             return (
               <div
                 key={order.id}
-                className="p-4 hover:bg-gray-50 transition-colors"
+                className="cursor-pointer p-4 transition-colors hover:bg-cream/60 active:bg-cream sm:p-5"
                 onClick={() => onViewDetails(order)}
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-emerald-600">
-                      #{order.id}
+                <div className="mb-3 flex items-start justify-between gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="font-space text-sm font-bold text-ink">
+                      #{order.orderNumber}
                     </span>
                     <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusConfig.bgColor} ${statusConfig.textColor}`}
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${statusConfig.bgColor} ${statusConfig.textColor}`}
                     >
-                      <StatusIcon className="w-3 h-3" />
+                      <StatusIcon className="h-3 w-3" />
                       {statusConfig.label}
                     </span>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onViewDetails(order);
-                        }}
-                      >
-                        <IconEye className="w-4 h-4 mr-2" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <IconTruck className="w-4 h-4 mr-2" />
-                        Track Order
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <IconMessageCircle className="w-4 h-4 mr-2" />
-                        Contact
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <OrderActionsMenu
+                    order={order}
+                    onViewDetails={onViewDetails}
+                    onAction={onAction}
+                    busy={busyId === order.id}
+                  />
                 </div>
 
-                <div className="flex items-center gap-3 mb-3">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={order.customer.avatar} />
-                    <AvatarFallback className="bg-emerald-100 text-emerald-700 text-xs">
-                      {order.customer.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
+                <div className="mb-3 flex min-w-0 items-center gap-3">
+                  <Avatar className="h-8 w-8">
+                    {order.customer?.avatar && <AvatarImage src={order.customer.avatar} />}
+                    <AvatarFallback className="bg-ink text-xs font-bold text-lime">
+                      {getInitials(name)}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {order.customer.name}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {order.items.count} item{order.items.count > 1 ? "s" : ""}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-ink">{name}</p>
+                    <p className="truncate text-xs text-black/55">
+                      {count} item{count === 1 ? "" : "s"}
+                      {names ? ` · ${names}` : ""}
                     </p>
                   </div>
+                  <ItemThumbs order={order} />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-base font-bold text-gray-900">
-                      ${order.total.toFixed(2)}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <span className="font-space text-base font-bold text-ink">
+                      {format(order.total)}
                     </span>
                     <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${paymentConfig.bgColor} ${paymentConfig.textColor}`}
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${paymentConfig.bgColor} ${paymentConfig.textColor}`}
                     >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${paymentConfig.dotColor}`}
-                      />
+                      <span className={`h-1.5 w-1.5 rounded-full ${paymentConfig.dotColor}`} />
                       {paymentConfig.label}
                     </span>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500">
-                      {order.date} · {order.time}
-                    </p>
-                  </div>
+                  <p className="text-right font-space text-[11px] text-black/40">
+                    {formatOrderDate(order.createdAt)} · {formatOrderTime(order.createdAt)}
+                  </p>
                 </div>
               </div>
             );
