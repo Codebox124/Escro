@@ -1,8 +1,9 @@
-// middleware.ts
+// proxy.ts — Next 16's replacement for middleware.ts. It runs on the Node.js
+// runtime (middleware defaulted to Edge, which Vercel Services can't deploy).
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // Get auth token and user role from cookies
   const token = request.cookies.get('auth-token')?.value;
   const userRole = request.cookies.get('user-role')?.value;
@@ -78,7 +79,7 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Configure which routes the middleware should run on
+// Configure which routes the proxy should run on
 export const config = {
   // Match all routes except:
   // - api routes
