@@ -7,9 +7,9 @@ export function proxy(request: NextRequest) {
   // Get auth token and user role from cookies
   const token = request.cookies.get('auth-token')?.value;
   const userRole = request.cookies.get('user-role')?.value;
-  
+
   const { pathname } = request.nextUrl;
-  
+
   // Define public routes (accessible without authentication)
   const publicRoutes = [
     '/',
@@ -19,10 +19,10 @@ export function proxy(request: NextRequest) {
     '/forgot-password',
     '/landing',
   ];
-  
+
   // Check if the current path is a public route
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
-  
+
   // If user is not authenticated and trying to access a protected route
   if (!token && !isPublicRoute) {
     const loginUrl = new URL('/login', request.url);
@@ -30,7 +30,7 @@ export function proxy(request: NextRequest) {
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
-  
+
   // If user is authenticated and trying to access login/signup, redirect to appropriate dashboard
   if (token && (pathname === '/login' || pathname === '/signup')) {
     // Redirect based on role
@@ -41,11 +41,21 @@ export function proxy(request: NextRequest) {
       courier: '/courier',
       customer: '/dashboard', // or wherever customers should go
     };
-    
+
     const redirectPath = userRole ? dashboardMap[userRole] || '/dashboard' : '/dashboard';
     return NextResponse.redirect(new URL(redirectPath, request.url));
   }
-  
+
+  // Short links like /settings go to the logged-in user's own section.
+  const SHORTCUTS: Record<string, Record<string, string>> = {
+    '/settings': { admin: '/admin/settings', agency: '/agency/settings', seller: '/mystore/settings', courier: '/courier/settings', customer: '/dashboard' },
+    '/profile': { admin: '/admin/settings', agency: '/agency/settings', seller: '/mystore/profile', courier: '/courier/settings', customer: '/dashboard' },
+    '/orders': { admin: '/admin', agency: '/agency/projects', seller: '/mystore/orders', courier: '/courier/mydeliveries', customer: '/dashboard/orders' },
+  };
+  if (token && SHORTCUTS[pathname]) {
+    return NextResponse.redirect(new URL(SHORTCUTS[pathname][userRole || ''] || '/dashboard', request.url));
+  }
+
   // Define role-based route protection
   const roleRoutes: Record<string, string[]> = {
     '/admin': ['admin'],
@@ -59,7 +69,7 @@ export function proxy(request: NextRequest) {
     // '/orders': ['customer'],
     // '/profile': ['customer', 'seller', 'admin'], // Multiple roles example
   };
-  
+
   // Check role-based access for protected routes
   for (const [route, allowedRoles] of Object.entries(roleRoutes)) {
     if (pathname.startsWith(route)) {
@@ -67,14 +77,14 @@ export function proxy(request: NextRequest) {
       if (allowedRoles.length > 0 && userRole && !allowedRoles.includes(userRole)) {
         return NextResponse.redirect(new URL('/unauthorized', request.url));
       }
-      
+
       // If roles are specified but user role is not available
       if (allowedRoles.length > 0 && !userRole) {
         return NextResponse.redirect(new URL('/login', request.url));
       }
     }
   }
-  
+
   // Allow the request to proceed
   return NextResponse.next();
 }

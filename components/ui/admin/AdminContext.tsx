@@ -12,11 +12,13 @@ import TRANSACTIONS from "@/components/ui/admin/data/transactions.json"
 
 interface Props{
     children: ReactNode
+    /** Page to open, from the URL (/admin/settings → "Settings"). Wins over the saved page. */
+    initialPage?: string
 }
 
 const AdminContext = createContext<any>(null)
 
-export const AdminContextProvider = ({children}:Props) =>{
+export const AdminContextProvider = ({children, initialPage}:Props) =>{
 
     const [services, setServices]= useState(SERVICES)
     const [transactions, setTransactions] = useState(TRANSACTIONS)
@@ -39,7 +41,9 @@ export const AdminContextProvider = ({children}:Props) =>{
     const VALID_PAGES = ["Dashboard", "Users", "Disputes", "Finance", "Settings"]
     let saved = ""
     try { saved = JSON.parse(localStorage.getItem("admin-current-page") || '""') } catch { saved = "" }
-    setCurrentPage(VALID_PAGES.includes(saved) ? saved : "Dashboard")
+    setCurrentPage(
+      initialPage && VALID_PAGES.includes(initialPage) ? initialPage : VALID_PAGES.includes(saved) ? saved : "Dashboard"
+    )
   }, [])
     useEffect(()=>{
         if (currentPage) localStorage.setItem("admin-current-page", JSON.stringify(currentPage))

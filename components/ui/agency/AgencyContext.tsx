@@ -9,11 +9,13 @@ import USERS from "@/components/ui/agency/data/users.json"
 
 interface Props{
     children: ReactNode
+    /** Page to open, from the URL (/agency/settings → "Settings"). Wins over the saved page. */
+    initialPage?: string
 }
 
 const AgencyContext = createContext<any>(null)
 
-export const AgencyContextProvider = ({children}:Props) =>{
+export const AgencyContextProvider = ({children, initialPage}:Props) =>{
 
     // Real services are loaded per-component via servicesService (see dashboard/Services.tsx).
     // Kept as an empty array so legacy consumers destructuring `services` keep working.
@@ -35,7 +37,9 @@ export const AgencyContextProvider = ({children}:Props) =>{
     const VALID_PAGES = ["Dashboard", "Agents", "Projects", "Messages", "Settings"]
     let saved = ""
     try { saved = JSON.parse(localStorage.getItem("agency-current-page") || '""') } catch { saved = "" }
-    setCurrentPage(VALID_PAGES.includes(saved) ? saved : "Dashboard")
+    setCurrentPage(
+      initialPage && VALID_PAGES.includes(initialPage) ? initialPage : VALID_PAGES.includes(saved) ? saved : "Dashboard"
+    )
   }, [])
     useEffect(()=>{
         if (currentPage) localStorage.setItem("agency-current-page", JSON.stringify(currentPage))
