@@ -3,10 +3,12 @@ import CourierSidebar from "./_components/sidebar";
 import Navbar from "./_components/navbar";
 import CourierBottomNav from "./_components/bottom-nav";
 import PlatformBanner from "@/components/ui/platform-banner";
+import LocationTracker from "./_components/location-tracker";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider className="font-mont bg-app">
+      <LocationTracker />
       <CourierSidebar />
       <div className="flex min-w-0 flex-1 flex-col w-full">
         <Navbar />

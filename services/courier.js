@@ -18,7 +18,9 @@ const unwrap = async (promise) => {
  *   order: { id, orderNumber, status, total, trackingNumber, notes, itemCount, items:[{name, quantity}] },
  *   pickup:  { name, logo, address, phone },          // seller/store
  *   dropoff: { name, phone, address, area },           // buyer — name/phone/address are null on open jobs (area only)
- *   pickedUpAt, deliveredAt, createdAt, updatedAt }
+ *   pickedUpAt, deliveredAt, createdAt, updatedAt,
+ *   // maps (migration 008): pickup.coords / dropoff.coords = { lat, lng, approximate? } | null
+ *   // (drop-off is rounded to ~1 km on open jobs), toPickupKm / toPickupMinutes from the courier }
  *
  * Lifecycle: open job (pending) → accept → assigned → picked_up → in_transit → delivered (or failed).
  * An assigned job can be released back before pickup. Picking up marks the order "shipped";
@@ -35,8 +37,11 @@ export const courierApi = {
    *      earningsToday, earningsYesterday, totalDeliveries, earningsTotal, rating } */
   dashboard: () => unwrap(api.get('/couriers/dashboard')),
 
-  /** Open jobs → { jobs: Delivery[] } */
-  jobs: () => unwrap(api.get('/couriers/jobs')),
+  /** Open jobs, nearest first when a position is known → { jobs: Delivery[], from:{lat,lng}|null }.
+   *  Pass the courier's current { lat, lng } if you have it. */
+  jobs: (pos) => unwrap(api.get('/couriers/jobs', { params: pos ? { lat: pos.lat, lng: pos.lng } : {} })),
+  /** Report the courier's live position (call every ~30s while online). 409 until migration 008 is run. */
+  updateLocation: (lat, lng) => unwrap(api.patch('/couriers/me/location', { lat, lng })),
   /** → Delivery (now assigned to me). 409 "just taken" if someone else got it first. */
   accept: (id) => unwrap(api.post(`/couriers/jobs/${id}/accept`)),
 

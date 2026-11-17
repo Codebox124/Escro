@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
   IconAlertTriangle,
+  IconCurrentLocation,
   IconMapPin,
+  IconX,
   IconPlus,
   IconRefresh,
   IconShieldCheck,
@@ -23,7 +26,14 @@ import { useCart, type CartItem } from "../_components/cart-context";
 import { buyerService } from "@/services/shop";
 import { formatMoney } from "@/lib/money";
 
+const MiniMap = dynamic(() => import("@/components/ui/mini-map"), {
+  ssr: false,
+  loading: () => <div className="h-56 w-full animate-pulse rounded-2xl bg-cream sm:h-64" />,
+});
+
 // ---------------------------------------------------------------- types
+
+type LatLng = { lat: number; lng: number };
 
 type Address = {
   id: string;
@@ -36,6 +46,8 @@ type Address = {
   zip: string | null;
   country: string;
   isDefault: boolean;
+  /** exact GPS pin (absent/null until migration 008 or if never pinned) */
+  coords?: LatLng | null;
 };
 
 type SummaryStore = {
@@ -128,6 +140,7 @@ export default function CheckoutPage() {
   const [form, setForm] = useState<AddressForm>(EMPTY_FORM);
   const [touched, setTouched] = useState(false);
   const [saveAddress, setSaveAddress] = useState(true);
+  const [pin, setPin] = useState<LatLng | null>(null);
   const [notes, setNotes] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -210,6 +223,8 @@ export default function CheckoutPage() {
         state: form.state.trim(),
         zip: form.zip.trim() || undefined,
         country: form.country.trim() || "Nigeria",
+        // optional exact drop-off pin (also saved with the address when "save" is ticked)
+        ...(pin ? { lat: pin.lat, lng: pin.lng } : {}),
       };
       const payload = usingNew
         ? { address, saveAddress, notes: notes.trim() || undefined }
@@ -317,6 +332,15 @@ export default function CheckoutPage() {
                         {a.label && (
                           <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-black/55 ring-1 ring-black/10">
                             {a.label}
+                          </span>
+                        )}
+                        {a.coords && (
+                          <span
+                            title="Exact location pinned for the courier"
+                            className="inline-flex items-center gap-1 rounded-full bg-ink px-2 py-0.5 text-[11px] font-bold text-lime"
+                          >
+                            <IconMapPin className="h-3 w-3" />
+                            Pinned
                           </span>
                         )}
                       </div>
@@ -451,6 +475,7 @@ export default function CheckoutPage() {
                     />
                     Save this address for next time
                   </label>
+                  <LocationPinField pin={pin} onChange={setPin} className="sm:col-span-2" />
                 </div>
               )}
             </section>
@@ -682,6 +707,109 @@ function Field({
       {children}
       {error && <span className="mt-1 block text-xs font-medium text-red-600">{error}</span>}
     </label>
+  );
+}
+
+function geoErrorMessage(err: GeolocationPositionError | null) {
+  if (!err) return "Your browser doesn't support location. You can still type your address — the pin is optional.";
+  if (err.code === err.PERMISSION_DENIED)
+    return "Location access was blocked. Allow it in your browser settings, or just type your address — the pin is optional.";
+  if (err.code === err.TIMEOUT) return "Finding your location took too long. Try again outdoors or near a window.";
+  return "We couldn't find your location right now. You can still type your address — the pin is optional.";
+}
+
+/** Optional exact drop-off pin: "use my current location" + draggable pin. */
+function LocationPinField({
+  pin,
+  onChange,
+  className = "",
+}: {
+  pin: LatLng | null;
+  onChange: (p: LatLng | null) => void;
+  className?: string;
+}) {
+  const [locating, setLocating] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [fitKey, setFitKey] = useState(0);
+
+  const locate = () => {
+    setGeoError(null);
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGeoError(geoErrorMessage(null));
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false);
+        onChange({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setFitKey((k) => k + 1);
+      },
+      (err) => {
+        setLocating(false);
+        setGeoError(geoErrorMessage(err));
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+    );
+  };
+
+  return (
+    <div className={`rounded-2xl bg-cream p-4 ${className}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 text-sm font-bold text-ink">
+            <IconMapPin className="h-4 w-4 shrink-0" />
+            Exact location <span className="font-normal text-black/45">(optional)</span>
+          </p>
+          <p className="mt-0.5 text-xs text-black/55">
+            Pin your door so the courier finds you without calling around.
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={locate}
+            disabled={locating}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-ink px-4 text-sm font-semibold text-white hover:bg-ink-soft disabled:opacity-60"
+          >
+            {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <IconCurrentLocation className="h-4 w-4" />}
+            {pin ? "Re-locate me" : "Use my current location"}
+          </button>
+          {pin && (
+            <button
+              type="button"
+              onClick={() => onChange(null)}
+              aria-label="Remove pin"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border-2 border-ink/15 text-ink hover:border-ink"
+            >
+              <IconX className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {geoError && (
+        <p role="alert" className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-800 ring-1 ring-amber-600/20">
+          {geoError}
+        </p>
+      )}
+
+      {pin && (
+        <div className="mt-3">
+          <MiniMap
+            markers={[{ lat: pin.lat, lng: pin.lng, kind: "pin", label: "Deliver here" }]}
+            onPinChange={onChange}
+            fitKey={fitKey}
+          />
+          <p className="mt-2 text-xs text-black/55">
+            Drag the pin (or tap the map) to fine-tune.{" "}
+            <span className="font-space text-black/40">
+              {pin.lat.toFixed(5)}, {pin.lng.toFixed(5)}
+            </span>
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 

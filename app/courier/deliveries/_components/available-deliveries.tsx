@@ -7,6 +7,8 @@ import {
   Lock,
   IconRefresh,
   IconBuildingStore,
+  IconCurrentLocation,
+  IconRoute,
 } from "@/components/icons";
 import { formatMoney } from "@/lib/money";
 import {
@@ -19,12 +21,14 @@ import {
 import {
   EmptyState,
   Shimmer,
+  formatKm,
+  formatMinutes,
   orderLabel,
   timeAgo,
   type Delivery,
 } from "../../_components/courier-shared";
 
-export type JobSort = "newest" | "fee";
+export type JobSort = "nearest" | "newest" | "fee";
 
 interface AvailableDeliveriesProps {
   jobs: Delivery[];
@@ -32,6 +36,8 @@ interface AvailableDeliveriesProps {
   refreshing: boolean;
   sort: JobSort;
   onSortChange: (s: JobSort) => void;
+  /** The server knows where the courier is, so jobs can be sorted nearest first. */
+  canSortByDistance?: boolean;
   onRefresh: () => void;
   onAccept: (id: string) => void;
   acceptingId: string | null;
@@ -61,6 +67,7 @@ const AvailableDeliveries = ({
   refreshing,
   sort,
   onSortChange,
+  canSortByDistance = false,
   onRefresh,
   onAccept,
   acceptingId,
@@ -75,9 +82,17 @@ const AvailableDeliveries = ({
           <span className="flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full bg-lime px-3 font-space text-base font-bold text-ink">
             {loading ? "–" : jobs.length}
           </span>
-          <h2 className="text-lg font-extrabold tracking-tight text-ink sm:text-xl">
-            Open jobs
-          </h2>
+          <div className="min-w-0">
+            <h2 className="text-lg font-extrabold tracking-tight text-ink sm:text-xl">
+              Open jobs
+            </h2>
+            {sort === "nearest" && jobs.length > 1 && (
+              <p className="inline-flex items-center gap-1 font-space text-[11px] uppercase tracking-widest text-emerald-700">
+                <IconCurrentLocation className="h-3.5 w-3.5" />
+                Nearest first
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -86,6 +101,9 @@ const AvailableDeliveries = ({
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent className="rounded-2xl">
+              <SelectItem value="nearest" disabled={!canSortByDistance}>
+                {canSortByDistance ? "Nearest first" : "Nearest first (needs location)"}
+              </SelectItem>
               <SelectItem value="newest">Newest first</SelectItem>
               <SelectItem value="fee">Highest fee</SelectItem>
             </SelectContent>
@@ -179,6 +197,27 @@ const AvailableDeliveries = ({
                       </div>
                     </div>
                   </div>
+
+                  {/* Distance */}
+                  {(job.toPickupKm != null || job.distanceKm != null) && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {job.toPickupKm != null && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-ink px-2.5 py-1 font-space text-[11px] font-bold text-lime">
+                          <IconCurrentLocation className="h-3.5 w-3.5" />
+                          {formatKm(Number(job.toPickupKm))} away
+                          {job.toPickupMinutes != null
+                            ? ` · ~${formatMinutes(Number(job.toPickupMinutes))}`
+                            : ""}
+                        </span>
+                      )}
+                      {job.distanceKm != null && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 font-space text-[11px] font-bold text-ink">
+                          <IconRoute className="h-3.5 w-3.5" />
+                          Trip ~{formatKm(Number(job.distanceKm))}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {/* Items */}
                   <div className="flex items-center gap-2 text-sm text-black/55">

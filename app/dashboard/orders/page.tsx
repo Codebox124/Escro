@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   ArrowRight,
   CheckCircle2,
@@ -11,7 +12,9 @@ import {
   IconChecks,
   IconChevronDown,
   IconClock,
+  IconMap,
   IconMapPin,
+  IconNavigation,
   IconPackage,
   IconPhone,
   IconRefresh,
@@ -35,6 +38,12 @@ import {
 import { buyerService } from "@/services/shop";
 import { formatMoney } from "@/lib/money";
 import { useCart } from "../_components/cart-context";
+import type { MiniMapMarker } from "@/components/ui/mini-map";
+
+const MiniMap = dynamic(() => import("@/components/ui/mini-map"), {
+  ssr: false,
+  loading: () => <div className="h-56 w-full animate-pulse rounded-2xl bg-cream sm:h-64" />,
+});
 
 // ---------------------------------------------------------------- types
 
@@ -96,10 +105,20 @@ type Order = {
     pickedUpAt: string | null;
     deliveredAt: string | null;
     courier: { name: string; phone: string | null; vehicle: string | null } | null;
+    /** absent until migration 008 runs */
+    map?: {
+      pickup: LatLng | null;
+      dropoff: LatLng | null;
+      courier: (LatLng & { updatedAt: string | null }) | null;
+      distanceKm: number | null;
+      etaMinutes: number | null;
+    } | null;
   } | null;
   createdAt: string;
   updatedAt: string;
 };
+
+type LatLng = { lat: number; lng: number };
 
 type Stats = { total: number; active: number; completed: number; cancelled: number; inEscrow: number };
 
@@ -146,6 +165,33 @@ const reasonLabel = (r: string) => REASONS.find((x) => x.value === r)?.label || 
 const MIGRATION_RE = /003_customer_flow\.sql/;
 const errMessage = (e: unknown, fallback: string) =>
   (e as { message?: string })?.message || fallback;
+
+const LIVE_DELIVERY: DeliveryStatus[] = ["picked_up", "in_transit"];
+
+const hasMapPins = (o: Order) => {
+  const m = o.delivery?.map;
+  return !!(m && (m.pickup || m.dropoff || m.courier));
+};
+
+const fmtEta = (mins: number | null | undefined) => {
+  if (mins == null || !Number.isFinite(Number(mins))) return null;
+  const m = Math.round(Number(mins));
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  return `${h} hr${h === 1 ? "" : "s"}${m % 60 ? ` ${m % 60} min` : ""}`;
+};
+
+const timeAgo = (iso: string | null | undefined, now: number) => {
+  if (!iso) return "";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "";
+  const mins = Math.max(0, Math.round((now - t) / 60000));
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs} hr${hrs === 1 ? "" : "s"} ago`;
+  return fmtDate(iso, true);
+};
 
 const fmtDate = (iso: string | null | undefined, withTime = false) => {
   if (!iso) return "";
@@ -232,6 +278,16 @@ export default function OrdersPage() {
   const replaceOrder = (updated: Order) => {
     setOrders((list) => list.map((o) => (o.id === updated.id ? { ...o, ...updated } : o)));
   };
+
+  // Quietly re-fetch one order (used by the live delivery tracker).
+  const refreshOrder = useCallback(async (id: string) => {
+    try {
+      const updated = (await buyerService.getOrder(id)) as Order | undefined;
+      if (updated?.id) setOrders((list) => list.map((o) => (o.id === updated.id ? { ...o, ...updated } : o)));
+    } catch {
+      /* keep the last known position */
+    }
+  }, []);
 
   const afterAction = async (updated: Order | undefined, id: string, text: string) => {
     if (updated?.id) replaceOrder(updated);
@@ -414,6 +470,7 @@ export default function OrdersPage() {
                   onAction={(type) => setDialog({ type, order })}
                   onReorder={() => reorder(order)}
                   reordering={reordering === order.id}
+                  onRefresh={refreshOrder}
                 />
               ))}
             </div>
@@ -444,6 +501,7 @@ function OrderCard({
   onAction,
   onReorder,
   reordering,
+  onRefresh,
 }: {
   order: Order;
   expanded: boolean;
@@ -453,6 +511,7 @@ function OrderCard({
   onAction: (type: "confirm" | "cancel" | "dispute") => void;
   onReorder: () => void;
   reordering: boolean;
+  onRefresh: (id: string) => Promise<void>;
 }) {
   const status = STATUS[order.status] || STATUS.pending;
   const StatusIcon = status.icon;
@@ -460,6 +519,8 @@ function OrderCard({
   const EscrowIcon = escrow?.icon;
   const itemCount = order.items.reduce((n, i) => n + i.quantity, 0);
   const canReorder = order.items.some((i) => i.productId);
+  const canTrack = hasMapPins(order);
+  const [tracking, setTracking] = useState(false);
 
   return (
     <article
@@ -510,7 +571,28 @@ function OrderCard({
           )}
         </div>
         {order.delivery && <DeliveryLine delivery={order.delivery} />}
+        {canTrack && (
+          <button
+            type="button"
+            onClick={() => setTracking((t) => !t)}
+            aria-expanded={tracking}
+            className={`mt-3 inline-flex h-10 items-center gap-2 rounded-full px-4 text-xs font-bold transition-colors ${
+              tracking ? "bg-ink text-lime" : "bg-white text-ink ring-1 ring-black/10 hover:ring-ink"
+            }`}
+          >
+            <IconMap className="h-4 w-4" />
+            {tracking ? "Hide map" : "Track delivery"}
+            {order.delivery?.map?.courier && (
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-lime-dark opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-lime-dark" />
+              </span>
+            )}
+          </button>
+        )}
       </div>
+
+      {canTrack && tracking && order.delivery && <DeliveryTracker order={order} onRefresh={onRefresh} />}
 
       <div className="p-3 pt-4 sm:p-4 sm:pt-5">
         {notice && (
@@ -695,6 +777,87 @@ function DeliveryLine({ delivery }: { delivery: NonNullable<Order["delivery"]> }
           )}
         </span>
       )}
+    </div>
+  );
+}
+
+function DeliveryTracker({ order, onRefresh }: { order: Order; onRefresh: (id: string) => Promise<void> }) {
+  const delivery = order.delivery!;
+  const map = delivery.map;
+  const live = LIVE_DELIVERY.includes(delivery.status);
+  const courierName = delivery.courier?.name || "Courier";
+  const [now, setNow] = useState(() => Date.now());
+
+  // Poll every 20s while the parcel is on its way and the tracker is open.
+  useEffect(() => {
+    if (!live) return;
+    const id = order.id;
+    const timer = window.setInterval(() => {
+      onRefresh(id).finally(() => setNow(Date.now()));
+    }, 20000);
+    return () => window.clearInterval(timer);
+  }, [live, order.id, onRefresh]);
+
+  const pickup = map?.pickup;
+  const dropoff = map?.dropoff;
+  const courierPos = map?.courier;
+  const markers = useMemo(() => {
+    const list: MiniMapMarker[] = [];
+    if (pickup) list.push({ lat: pickup.lat, lng: pickup.lng, kind: "pickup", label: order.store?.name || "Store" });
+    if (courierPos) list.push({ lat: courierPos.lat, lng: courierPos.lng, kind: "courier", label: courierName });
+    if (dropoff) list.push({ lat: dropoff.lat, lng: dropoff.lng, kind: "dropoff", label: "You" });
+    return list;
+  }, [pickup, dropoff, courierPos, order.store?.name, courierName]);
+
+  const eta = fmtEta(map?.etaMinutes);
+  const distance = map?.distanceKm != null ? `${Number(map.distanceKm).toFixed(1)} km` : null;
+
+  return (
+    <div className="px-2 pt-3 sm:px-3">
+      <MiniMap markers={markers} line />
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+        {courierPos ? (
+          <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-ink px-3 py-1.5 font-bold text-lime">
+            <IconNavigation className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{courierName}</span>
+            {courierPos.updatedAt && (
+              <span className="shrink-0 font-normal text-white/60">· updated {timeAgo(courierPos.updatedAt, now)}</span>
+            )}
+          </span>
+        ) : live ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 font-semibold text-amber-800 ring-1 ring-amber-600/20">
+            Waiting for the courier&apos;s location…
+          </span>
+        ) : delivery.status !== "delivered" ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 font-semibold text-black/60">
+            The courier&apos;s live location shows once your order is picked up
+          </span>
+        ) : null}
+        {distance && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 font-space font-bold text-ink">
+            <IconMapPin className="h-3.5 w-3.5" />
+            {distance}
+          </span>
+        )}
+        {eta && delivery.status !== "delivered" && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-3 py-1.5 font-space font-bold text-ink">
+            <IconClock className="h-3.5 w-3.5" />~{eta}
+          </span>
+        )}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-space text-[11px] text-black/50">
+        {pickup && (
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-ink" /> Store pickup
+          </span>
+        )}
+        {dropoff && (
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-lime ring-1 ring-ink/20" /> Your address
+          </span>
+        )}
+        {live && <span>Live · refreshes every 20s</span>}
+      </div>
     </div>
   );
 }

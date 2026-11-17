@@ -2,14 +2,23 @@
 
 import {
   IconBuildingStore,
+  IconCurrentLocation,
   IconMapPin,
   IconNavigation,
   IconPackage,
   IconPhone,
+  IconRoute,
 } from "@/components/icons";
 import { formatMoney } from "@/lib/money";
+import { formatKm, formatMinutes } from "../../_components/courier-shared";
 
 export type DeliveryStatus = "pending" | "assigned" | "picked_up" | "in_transit" | "delivered" | "failed";
+
+export interface MapCoords {
+  lat: number;
+  lng: number;
+  approximate?: boolean;
+}
 
 /** Shape returned by courierApi.deliveries() — see services/courier.js. */
 export interface CourierDelivery {
@@ -28,8 +37,23 @@ export interface CourierDelivery {
     itemCount: number;
     items: { name: string; quantity: number }[];
   } | null;
-  pickup: { name: string | null; logo: string | null; address: string | null; phone: string | null } | null;
-  dropoff: { name: string | null; phone: string | null; address: string | null; area: string | null } | null;
+  toPickupKm?: number | null;
+  toPickupMinutes?: number | null;
+  pickup: {
+    name: string | null;
+    logo: string | null;
+    address: string | null;
+    phone: string | null;
+    /** undefined = maps migration not run; null = location not found */
+    coords?: MapCoords | null;
+  } | null;
+  dropoff: {
+    name: string | null;
+    phone: string | null;
+    address: string | null;
+    area: string | null;
+    coords?: MapCoords | null;
+  } | null;
   pickedUpAt: string | null;
   deliveredAt: string | null;
   createdAt: string;
@@ -56,12 +80,15 @@ function Stop({
   address,
   phone,
   isNext,
+  located,
 }: {
   kind: "pickup" | "dropoff";
   title: string;
   address: string | null;
   phone: string | null;
   isNext: boolean;
+  /** false = no map pin for this stop */
+  located: boolean;
 }) {
   const Icon = kind === "pickup" ? IconBuildingStore : IconMapPin;
   return (
@@ -81,6 +108,12 @@ function Stop({
           </p>
           <p className="truncate text-sm font-bold text-ink">{title}</p>
           <p className="text-sm text-black/60">{address || "Address not available"}</p>
+          {!located && (
+            <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-amber-700">
+              <IconMapPin className="h-3.5 w-3.5 shrink-0" />
+              Location not found — use Navigate
+            </p>
+          )}
         </div>
       </div>
       <div className="mt-3 flex gap-2">
@@ -115,7 +148,23 @@ function Stop({
   );
 }
 
-export default function DeliveryCard({ delivery }: { delivery: CourierDelivery }) {
+interface DeliveryCardProps {
+  delivery: CourierDelivery;
+  selected?: boolean;
+  /** Focus this delivery's pins on the map. Omit when it has no pins. */
+  onSelect?: () => void;
+  /** Rough km from the courier to the next stop (client-side estimate). */
+  toNextKm?: number | null;
+  toNextMinutes?: number | null;
+}
+
+export default function DeliveryCard({
+  delivery,
+  selected = false,
+  onSelect,
+  toNextKm = null,
+  toNextMinutes = null,
+}: DeliveryCardProps) {
   const status = STATUS[delivery.status] || STATUS.assigned;
   const headingToDropoff = delivery.status === "picked_up" || delivery.status === "in_transit";
   const dropoffAddress =
@@ -124,7 +173,12 @@ export default function DeliveryCard({ delivery }: { delivery: CourierDelivery }
   const itemCount = delivery.order?.itemCount ?? items.reduce((n, i) => n + (i.quantity || 0), 0);
 
   return (
-    <article className="rounded-3xl bg-white p-4 ring-1 ring-black/5">
+    <article
+      onClick={onSelect}
+      className={`rounded-3xl bg-white p-4 transition-shadow ${
+        selected ? "ring-2 ring-ink shadow-lg" : "ring-1 ring-black/5"
+      } ${onSelect ? "cursor-pointer" : ""}`}
+    >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <span className={`inline-flex rounded-full px-2.5 py-0.5 font-space text-[10px] font-bold uppercase tracking-widest ${status.cls}`}>
@@ -147,6 +201,38 @@ export default function DeliveryCard({ delivery }: { delivery: CourierDelivery }
         </div>
       </div>
 
+      {(toNextKm != null || delivery.distanceKm != null || onSelect) && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {toNextKm != null && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-ink px-2.5 py-1 font-space text-[11px] font-bold text-lime">
+              <IconCurrentLocation className="h-3.5 w-3.5" />
+              {formatKm(toNextKm)} to {headingToDropoff ? "drop-off" : "pickup"}
+              {toNextMinutes != null ? ` · ~${formatMinutes(toNextMinutes)}` : ""}
+            </span>
+          )}
+          {delivery.distanceKm != null && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 font-space text-[11px] font-bold text-ink">
+              <IconRoute className="h-3.5 w-3.5" />
+              Trip ~{formatKm(Number(delivery.distanceKm))}
+              {delivery.estimatedMinutes != null ? ` · ~${formatMinutes(Number(delivery.estimatedMinutes))}` : ""}
+            </span>
+          )}
+          {onSelect && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect();
+              }}
+              className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-full border-2 border-ink/15 bg-white px-3 text-xs font-bold text-ink transition-colors hover:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-dark/60"
+            >
+              <IconMapPin className="h-3.5 w-3.5" />
+              Show on map
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="space-y-2">
         <Stop
           kind="pickup"
@@ -154,6 +240,7 @@ export default function DeliveryCard({ delivery }: { delivery: CourierDelivery }
           address={delivery.pickup?.address ?? null}
           phone={delivery.pickup?.phone ?? null}
           isNext={!headingToDropoff}
+          located={delivery.pickup?.coords !== null}
         />
         <Stop
           kind="dropoff"
@@ -161,6 +248,7 @@ export default function DeliveryCard({ delivery }: { delivery: CourierDelivery }
           address={dropoffAddress}
           phone={delivery.dropoff?.phone ?? null}
           isNext={headingToDropoff}
+          located={delivery.dropoff?.coords !== null}
         />
       </div>
 

@@ -13,6 +13,7 @@ import {
   IconAlertCircle,
   IconBuildingStore,
   IconMessage,
+  IconRoute,
 } from "@/components/icons";
 import { formatMoney } from "@/lib/money";
 import {
@@ -22,6 +23,8 @@ import {
   ErrorState,
   Shimmer,
   errorMessage,
+  formatKm,
+  formatMinutes,
   itemsSummary,
   mapsUrl,
   orderLabel,
@@ -129,6 +132,15 @@ export function DeliveryCard({ delivery, onUpdated, onRemoved }: CardProps) {
           <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${statusColors[status]}`}>
             {statusLabels[status]}
           </span>
+          {delivery.distanceKm != null && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-cream px-2.5 py-1 font-space text-[11px] font-bold text-ink">
+              <IconRoute className="h-3.5 w-3.5" />
+              Trip ~{formatKm(Number(delivery.distanceKm))}
+              {delivery.estimatedMinutes != null
+                ? ` · ~${formatMinutes(Number(delivery.estimatedMinutes))}`
+                : ""}
+            </span>
+          )}
         </div>
         <span className="rounded-full bg-ink px-3 py-1 font-space text-sm font-bold text-lime">
           {formatMoney(delivery.fee, "ngn")}
