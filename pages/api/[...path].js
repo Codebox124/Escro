@@ -5,19 +5,18 @@
 // The Pages Router is used (rather than an App Router route handler) because it
 // gives Node's req/res objects, which Express understands natively.
 //
-// Express isn't bundled: it's loaded with Node's own require at runtime from
-// backend/ (and backend/node_modules). Bundlers can't follow Express's dynamic
-// requires, so `eval('require')` keeps it out of the bundle on purpose.
-// next.config.ts traces backend/** into the deployment so the files are there.
-import path from 'path';
+// The backend's dependencies live in the root package.json and are listed in
+// next.config.ts `serverExternalPackages`, so Next loads them from node_modules
+// at runtime (and ships them with this function) instead of bundling them.
 
 let app;
-
-function getApp() {
-  if (app) return app;
-  const nodeRequire = eval('require');
-  app = nodeRequire(path.join(process.cwd(), 'backend', 'server.js'));
-  return app;
+let startupError;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  app = require('../../backend/server');
+} catch (err) {
+  startupError = err;
+  console.error('[api] backend failed to start:', err);
 }
 
 export const config = {
@@ -29,13 +28,10 @@ export const config = {
 };
 
 export default function handler(req, res) {
-  let server;
-  try {
-    server = getApp();
-  } catch (err) {
+  if (!app) {
     // The backend couldn't start (missing env vars, missing dependencies, ...).
     // Report why instead of a bare 500 so it can be fixed from the response/logs.
-    console.error('[api] backend failed to start:', err);
+    const err = startupError;
     const missingEnv = /Missing Supabase environment variables/i.test(err?.message || '');
     res.status(500).json({
       status: 'error',
@@ -45,5 +41,5 @@ export default function handler(req, res) {
     });
     return;
   }
-  return server(req, res);
+  return app(req, res);
 }

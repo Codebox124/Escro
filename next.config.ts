@@ -9,12 +9,26 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // The Express API (backend/) is loaded at runtime by pages/api/[...path].js,
-  // so make sure its code and dependencies are shipped with that function.
-  // (Keys are globs over route paths, so "[...path]" can't be written literally.)
-  outputFileTracingIncludes: {
-    "/api/**": ["./backend/**/*"],
-  },
+  // The Express API (backend/) runs inside Next via pages/api/[...path].js.
+  // Its dependencies are loaded from node_modules at runtime instead of being
+  // bundled (Express uses dynamic requires bundlers can't follow); Next still
+  // traces them so they ship with the API function on Vercel.
+  serverExternalPackages: [
+    "express",
+    "cors",
+    "helmet",
+    "morgan",
+    "compression",
+    "express-rate-limit",
+    "express-validator",
+    "dotenv",
+    "multer",
+    "@supabase/supabase-js",
+    "jsonwebtoken",
+    "bcryptjs",
+    "stripe",
+    "nodemailer",
+  ],
 };
 
 export default nextConfig;
