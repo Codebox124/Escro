@@ -271,7 +271,7 @@ export default function Hero() {
               ))}
             </div>
             <p className="text-sm text-black/60">
-              <span className="font-bold text-[#0C110E]">10,000+</span> people trading
+              <span className="font-bold text-[#0C110E]">500+</span> people trading
               <br className="sm:hidden" /> without the trust issues
             </p>
           </div>

@@ -1,11 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, Bike, Building2, Check, ShoppingBag, Store } from "@/components/icons";
+import { platformApi } from "@/services/admin";
 
-const roles = [
+type PlatformStats = Record<"products" | "stores" | "couriers" | "agencies", number>;
+
+const formatCount = (n: number) =>
+  new Intl.NumberFormat("en-NG", { notation: n >= 10000 ? "compact" : "standard", maximumFractionDigits: 1 }).format(n);
+
+const roles: {
+  key: string; img: string; label: string; icon: React.ElementType; bg: string; headline: string;
+  points: string[]; stat: { key: keyof PlatformStats; one: string; many: string }; cta: string;
+}[] = [
   {
     key: "buyer",
     img: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&q=80&auto=format&fit=crop",
@@ -19,7 +28,7 @@ const roles = [
       "Live tracking from store to door",
       "One cart across many vendors",
     ],
-    stat: ["$0", "lost to scams by Escro buyers"],
+    stat: { key: "products", one: "product ready to order with escrow protection", many: "products ready to order with escrow protection" },
     cta: "Start shopping",
   },
   {
@@ -35,7 +44,7 @@ const roles = [
       "Payout the moment buyers confirm",
       "Protection against fake chargebacks",
     ],
-    stat: ["3x", "more conversions with escrow badges"],
+    stat: { key: "stores", one: "store already selling on Escro", many: "stores already selling on Escro" },
     cta: "Open your store",
   },
   {
@@ -51,7 +60,7 @@ const roles = [
       "Weekly payouts straight to your bank",
       "Ratings that grow your income",
     ],
-    stat: ["$1.2k", "average monthly courier earnings"],
+    stat: { key: "couriers", one: "courier delivering with Escro", many: "couriers delivering with Escro" },
     cta: "Ride with Escro",
   },
   {
@@ -67,13 +76,30 @@ const roles = [
       "Transparent per-job revenue",
       "Dispute support built in",
     ],
-    stat: ["40+", "agencies already onboard"],
+    stat: { key: "agencies", one: "agency already onboard", many: "agencies already onboard" },
     cta: "Partner with us",
   },
 ];
 
 export default function Roles() {
   const [active, setActive] = useState(0);
+  // Live counts from the database (null while loading / if unavailable)
+  const [stats, setStats] = useState<PlatformStats | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    platformApi
+      .stats()
+      .then((d: PlatformStats | null) => {
+        if (!cancelled && d) setStats(d);
+      })
+      .catch(() => {
+        /* keep the placeholder */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const r = roles[active];
 
   return (
@@ -168,9 +194,9 @@ export default function Roles() {
               </span>
               <div className={`absolute bottom-5 left-5 right-5 rounded-3xl p-5 sm:bottom-8 sm:left-8 sm:right-auto sm:max-w-xs ${r.bg}`}>
                 <p className="font-space text-5xl font-bold tracking-tighter text-ink sm:text-6xl">
-                  {r.stat[0]}
+                  {stats ? formatCount(stats[r.stat.key]) : <span className="inline-block h-[0.9em] w-16 animate-pulse rounded-lg bg-ink/15 align-middle" />}
                 </p>
-                <p className="mt-1 font-semibold text-ink/75">{r.stat[1]}</p>
+                <p className="mt-1 font-semibold text-ink/75">{stats && stats[r.stat.key] === 1 ? r.stat.one : r.stat.many}</p>
               </div>
             </div>
           </motion.div>

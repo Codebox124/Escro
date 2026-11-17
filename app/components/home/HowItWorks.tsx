@@ -88,7 +88,7 @@ const HowItWorks = () => {
 
   // Stats configuration
   const stats = [
-    { icon: Users, value: "10K+", label: "Active Users" },
+    { icon: Users, value: "500+", label: "Active Users" },
     { icon: Shield, value: "100%", label: "Escrow Protected" },
     { icon: Zap, value: "< 2min", label: "Avg. Setup Time" },
   ];

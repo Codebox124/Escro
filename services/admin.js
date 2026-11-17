@@ -79,4 +79,6 @@ export const adminSettingsApi = {
 /** Public: { maintenance:{enabled,message}, announcement:{enabled,text,tone}, ordersPaused, signupsPaused } | null */
 export const platformApi = {
   status: () => unwrap(api.get('/platform/status')),
+  /** Real counts for the landing page → { users, stores, products, orders, completedOrders, couriers, deliveries, agencies, services } | null */
+  stats: () => unwrap(api.get('/platform/stats')),
 };
