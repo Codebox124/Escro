@@ -12,11 +12,11 @@
 import path from 'path';
 
 let app;
+
 function getApp() {
-  if (!app) {
-    const nodeRequire = eval('require');
-    app = nodeRequire(path.join(process.cwd(), 'backend', 'server.js'));
-  }
+  if (app) return app;
+  const nodeRequire = eval('require');
+  app = nodeRequire(path.join(process.cwd(), 'backend', 'server.js'));
   return app;
 }
 
@@ -29,5 +29,21 @@ export const config = {
 };
 
 export default function handler(req, res) {
-  return getApp()(req, res);
+  let server;
+  try {
+    server = getApp();
+  } catch (err) {
+    // The backend couldn't start (missing env vars, missing dependencies, ...).
+    // Report why instead of a bare 500 so it can be fixed from the response/logs.
+    console.error('[api] backend failed to start:', err);
+    const missingEnv = /Missing Supabase environment variables/i.test(err?.message || '');
+    res.status(500).json({
+      status: 'error',
+      message: missingEnv
+        ? 'Server is not configured: add SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY and JWT_SECRET in your hosting environment variables, then redeploy.'
+        : `Backend failed to start: ${err?.code ? `${err.code} ` : ''}${err?.message || 'unknown error'}`,
+    });
+    return;
+  }
+  return server(req, res);
 }
