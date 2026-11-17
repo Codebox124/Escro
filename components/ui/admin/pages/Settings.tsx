@@ -93,7 +93,7 @@ function Settings() {
               onSave={save}
             />
             <OperationsSettings
-              key={`${current.settings.defaultDeliveryFee}:${current.settings.courierMaxActiveJobs}`}
+              key={`${current.settings.defaultDeliveryFee}:${current.settings.courierMaxActiveJobs}:${current.settings.commissionRate}`}
               settings={current.settings}
               available={current.available}
               onSave={save}

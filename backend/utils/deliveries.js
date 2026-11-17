@@ -3,6 +3,7 @@
 
 const { supabaseAdmin } = require('../config/supabase');
 const { getPlatformSettings } = require('./platform');
+const { ensureDeliveryCoords, mapsReady } = require('./geo');
 
 const DEFAULT_DELIVERY_FEE = 1500; // NGN, used when an order has no shipping fee
 
@@ -57,6 +58,8 @@ async function openDeliveryJob(orderId) {
     .select('id, status')
     .single();
   if (insertError) throw insertError;
+  // Pin pickup/drop-off on the map (exact GPS pins first, else geocode the addresses).
+  if (await mapsReady()) await ensureDeliveryCoords(created.id);
   return created;
 }
 

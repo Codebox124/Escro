@@ -23,12 +23,22 @@ export type DeliveryStatus =
   | "delivered"
   | "failed";
 
+/** Map pin from the backend (migration 008). `approximate` = rounded to ~1 km (open jobs). */
+export interface Coords {
+  lat: number;
+  lng: number;
+  approximate?: boolean;
+}
+
 export interface Delivery {
   id: string;
   status: DeliveryStatus;
   fee: number;
   distanceKm: number | null;
   estimatedMinutes: number | null;
+  /** Road-ish km / minutes from the courier to the pickup (when a position is known). */
+  toPickupKm?: number | null;
+  toPickupMinutes?: number | null;
   order: {
     id: string;
     orderNumber: string | null;
@@ -44,12 +54,15 @@ export interface Delivery {
     logo: string | null;
     address: string | null;
     phone: string | null;
+    /** undefined = maps migration not run; null = location not found */
+    coords?: Coords | null;
   };
   dropoff: {
     name: string | null;
     phone: string | null;
     address: string | null;
     area: string | null;
+    coords?: Coords | null;
   };
   pickedUpAt: string | null;
   deliveredAt: string | null;
@@ -71,6 +84,8 @@ export interface CourierProfile {
   totalDeliveries: number;
   earningsTotal: number;
   memberSince: string | null;
+  /** Last reported position (migration 008). */
+  location?: { lat: number; lng: number; updatedAt?: string | null } | null;
 }
 
 export interface CourierDashboard {
@@ -92,7 +107,13 @@ export const api = {
   updateMe: (data: Partial<{ isAvailable: boolean }>) =>
     courierApi.updateMe(data) as Promise<CourierProfile>,
   dashboard: () => courierApi.dashboard() as Promise<CourierDashboard>,
-  jobs: () => courierApi.jobs() as Promise<{ jobs: Delivery[] }>,
+  jobs: (pos?: { lat: number; lng: number } | null) =>
+    courierApi.jobs(pos ?? undefined) as Promise<{
+      jobs: Delivery[];
+      from: { lat: number; lng: number } | null;
+    }>,
+  updateLocation: (lat: number, lng: number) =>
+    courierApi.updateLocation(lat, lng) as Promise<unknown>,
   accept: (id: string) => courierApi.accept(id) as Promise<Delivery>,
   deliveries: (scope: "active" | "completed" | "all") =>
     courierApi.deliveries(scope) as Promise<{ deliveries: Delivery[] }>,
@@ -114,6 +135,55 @@ export function errorMessage(err: unknown, fallback = "Something went wrong"): s
   }
   return fallback;
 }
+
+/* ------------------------------------------------------------------ */
+/* Distance helpers                                                    */
+/* ------------------------------------------------------------------ */
+
+type LatLng = { lat: number; lng: number };
+
+/** Straight-line distance in km. */
+export function haversineKm(a: LatLng, b: LatLng): number {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/** Rough road distance (straight line × 1.3), matching the backend. */
+export function roadKm(a: LatLng, b: LatLng): number {
+  return haversineKm(a, b) * 1.3;
+}
+
+/** ETA at ~20 km/h city speed (same as the backend). */
+export function etaMinutes(km: number | null | undefined): number | null {
+  if (km == null || !Number.isFinite(km)) return null;
+  return Math.max(1, Math.round((km / 20) * 60));
+}
+
+export function formatKm(km: number): string {
+  if (km < 1) return `${Math.max(50, Math.round((km * 1000) / 50) * 50)} m`;
+  return `${km < 10 ? km.toFixed(1) : Math.round(km)} km`;
+}
+
+export function formatMinutes(min: number): string {
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m ? `${h} h ${m} min` : `${h} h`;
+}
+
+/** True when an error says the maps DB migration (008_maps.sql) hasn't been run. */
+export function isMapsMigrationError(err: unknown): boolean {
+  return /008_maps\.sql/i.test(errorMessage(err, ""));
+}
+
+export const MAPS_MIGRATION_NOTE =
+  "Map pins need a one-time database update — run backend/database/migrations/008_maps.sql in Supabase";
 
 export const ACTIVE_STATUSES: DeliveryStatus[] = ["assigned", "picked_up", "in_transit"];
 
@@ -267,6 +337,49 @@ export function useCourier(): CourierState {
     void loadCourierProfile();
   }, []);
   return s;
+}
+
+/* ------------------------------------------------------------------ */
+/* Live location store (written by <LocationTracker />)                */
+/* ------------------------------------------------------------------ */
+
+export type LocationPermission = "unknown" | "granted" | "denied" | "unsupported";
+
+export interface CourierLocationState {
+  /** Latest browser position (only while online and allowed). */
+  position: { lat: number; lng: number; accuracy: number | null; at: number } | null;
+  permission: LocationPermission;
+  /** Server said the maps migration (008) hasn't been run. */
+  migrationNeeded: boolean;
+}
+
+let locState: CourierLocationState = {
+  position: null,
+  permission: "unknown",
+  migrationNeeded: false,
+};
+const LOC_SERVER_STATE = locState;
+const locListeners = new Set<() => void>();
+
+export function setCourierLocation(patch: Partial<CourierLocationState>) {
+  const next = { ...locState, ...patch };
+  if (
+    next.position === locState.position &&
+    next.permission === locState.permission &&
+    next.migrationNeeded === locState.migrationNeeded
+  )
+    return;
+  locState = next;
+  locListeners.forEach((l) => l());
+}
+
+function subscribeLocation(l: () => void) {
+  locListeners.add(l);
+  return () => locListeners.delete(l);
+}
+
+export function useCourierLocation(): CourierLocationState {
+  return useSyncExternalStore(subscribeLocation, () => locState, () => LOC_SERVER_STATE);
 }
 
 /* ------------------------------------------------------------------ */

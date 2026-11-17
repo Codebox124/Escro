@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Copy,
   Package,
@@ -28,6 +28,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useMoney } from "@/app/mystore/_components/currency";
+import { previewSplit, walletApi } from "@/services/wallet";
 import {
   actionConfig,
   formatOrderDate,
@@ -180,6 +181,23 @@ const nextStepHint: Record<string, string> = {
 const OrderDetails = ({ order, open, onClose, onAction, busy = false }: OrderDetailsProps) => {
   const { format } = useMoney();
   const [copied, setCopied] = useState<string | null>(null);
+  const [commissionRate, setCommissionRate] = useState(5);
+
+  // Use the platform's live commission rate for the payout preview (falls back to 5%)
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    walletApi
+      .get()
+      .then((w: { commissionRate?: number } | null) => {
+        const rate = Number(w?.commissionRate);
+        if (!cancelled && Number.isFinite(rate)) setCommissionRate(rate);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   if (!order) return null;
 
@@ -198,6 +216,13 @@ const OrderDetails = ({ order, open, onClose, onAction, busy = false }: OrderDet
   const currentStep = stepIndex[order.status] ?? -1;
   const progress = currentStep >= 0 ? ((currentStep + 1) / statusSteps.length) * 100 : 0;
   const timeline = buildTimeline(order);
+  const hasCourier = !!order.delivery;
+  const payout = previewSplit({
+    subtotal: Number(order.subtotal) || 0,
+    total: Number(order.total) || 0,
+    courierFee: hasCourier ? Number(order.shippingFee) || 0 : 0,
+    commissionRate,
+  });
   const actions = getAllowedActions(order);
   const forwardActions = actions.filter((a) => a !== "cancelled");
   const canCancel = actions.includes("cancelled");
@@ -478,6 +503,33 @@ const OrderDetails = ({ order, open, onClose, onAction, busy = false }: OrderDet
               <div className="flex items-center justify-between rounded-2xl bg-ink px-4 py-3 text-base font-bold">
                 <span className="text-white">Total</span>
                 <span className="font-space text-lime">{format(order.total)}</span>
+              </div>
+            </div>
+
+            {/* Your payout */}
+            <div className="mt-4 border-t border-black/5 pt-4">
+              <h4 className="eyebrow mb-3 font-space text-[11px] text-black/45">Your payout</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-black/55">Escro fee ({commissionRate}%)</span>
+                  <span className="font-space text-red-600">−{format(payout.commission)}</span>
+                </div>
+                {hasCourier && (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-black/55">
+                      Courier delivery
+                      <span className="block text-xs text-black/40">Minus courier delivery fee</span>
+                    </span>
+                    <span className="font-space text-red-600">−{format(payout.courier)}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between rounded-2xl bg-lime/40 px-4 py-3 font-bold">
+                  <span className="text-ink">You receive</span>
+                  <span className="font-space text-ink">{format(payout.store)}</span>
+                </div>
+                <p className="text-xs text-black/50">
+                  Paid to your Escro wallet when the buyer confirms delivery.
+                </p>
               </div>
             </div>
 

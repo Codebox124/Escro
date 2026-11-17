@@ -8,6 +8,8 @@ const { protect } = require('../middleware/auth.middleware');
 const { toProduct, queryProducts, isMissingColumn } = require('../utils/catalog');
 const { closeUnassignedJob } = require('../utils/deliveries');
 const { getPlatformSettings } = require('../utils/platform');
+const { settleOrder } = require('../utils/wallet');
+const { validCoord, mapsReady } = require('../utils/geo');
 
 const router = express.Router();
 router.use(protect);
@@ -182,6 +184,7 @@ const toAddress = (a) => ({
   zip: a.zip,
   country: a.country,
   isDefault: a.is_default,
+  coords: validCoord(a.lat, a.lng) ? { lat: a.lat, lng: a.lng } : null,
 });
 
 function validateAddress(a) {
@@ -226,6 +229,7 @@ async function saveAddress(customerId, a, makeDefault) {
         zip: String(a.zip || '').trim() || null,
         country: String(a.country || 'Nigeria').trim(),
         is_default: !!makeDefault,
+        ...((await mapsReady()) && validCoord(a.lat, a.lng) ? { lat: Number(a.lat), lng: Number(a.lng) } : {}),
       },
     ])
     .select('*')
@@ -387,6 +391,10 @@ router.post('/checkout', async (req, res) => {
       if (store.seller_id === req.user.id) return bad(res, "You can't buy from your own store");
     }
 
+    // Exact drop-off pin, if the buyer shared their location for this address.
+    const withPins = await mapsReady();
+    const addressPin = address.coords || (validCoord(address.lat, address.lng) ? { lat: address.lat, lng: address.lng } : null);
+
     for (const [storeId, items] of groups) {
       const subtotal = Math.round(items.reduce((n, i) => n + i.lineTotal, 0) * 100) / 100;
       const pricing = priceStorePortion(settings.get(storeId), subtotal);
@@ -410,6 +418,7 @@ router.post('/checkout', async (req, res) => {
             shipping_state: address.state,
             shipping_zip: address.zip || null,
             shipping_country: address.country || 'Nigeria',
+            ...(withPins && validCoord(addressPin?.lat, addressPin?.lng) ? { shipping_lat: Number(addressPin.lat), shipping_lng: Number(addressPin.lng) } : {}),
             notes: String(notes || '').trim() || null,
           },
         ])
@@ -517,6 +526,17 @@ function toOrder(o, disputes = []) {
         courier: d.couriers
           ? { name: d.couriers.users?.full_name || 'Courier', phone: d.couriers.users?.phone || null, vehicle: d.couriers.vehicle_type || null }
           : null,
+        // Map pins; the courier's live position is only shared while the order is on its way.
+        map: {
+          pickup: validCoord(d.pickup_lat, d.pickup_lng) ? { lat: d.pickup_lat, lng: d.pickup_lng } : null,
+          dropoff: validCoord(d.dropoff_lat, d.dropoff_lng) ? { lat: d.dropoff_lat, lng: d.dropoff_lng } : null,
+          courier:
+            ['picked_up', 'in_transit'].includes(d.status) && d.couriers && validCoord(d.couriers.last_lat, d.couriers.last_lng)
+              ? { lat: d.couriers.last_lat, lng: d.couriers.last_lng, updatedAt: d.couriers.last_seen_at }
+              : null,
+          distanceKm: d.distance_km != null ? Number(d.distance_km) : null,
+          etaMinutes: d.estimated_time ?? null,
+        },
       };
     })(),
     escrow: escrow
@@ -549,7 +569,18 @@ function toOrder(o, disputes = []) {
 
 async function fetchOrders(customerId, extra = (q) => q) {
   const { data, error } = await extra(
-    supabaseAdmin.from('orders').select(ORDER_SELECT).eq('customer_id', customerId).order('created_at', { ascending: false })
+    supabaseAdmin
+      .from('orders')
+      .select(
+        (await mapsReady())
+          ? ORDER_SELECT.replace(
+              'deliveries ( id, status, picked_up_at, delivered_at, couriers ( vehicle_type, users ( full_name, phone ) ) )',
+              'deliveries ( id, status, picked_up_at, delivered_at, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, distance_km, estimated_time, couriers ( vehicle_type, last_lat, last_lng, last_seen_at, users ( full_name, phone ) ) )'
+            )
+          : ORDER_SELECT
+      )
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false })
   );
   if (error) throw error;
   const rows = data || [];
@@ -612,6 +643,13 @@ router.post('/orders/:id/confirm', async (req, res) => {
       .from('escrow_transactions')
       .update({ status: 'released', released_at: now, updated_at: now })
       .eq('order_id', order.id);
+
+    // Split the released money: store share, courier fee, Escro commission.
+    try {
+      await settleOrder(order.id);
+    } catch (e) {
+      console.error('wallet settlement failed for order', order.id, e);
+    }
 
     // Sales counters (best effort)
     for (const item of order.items) {

@@ -12,6 +12,7 @@ const express = require('express');
 const { supabaseAdmin } = require('../config/supabase');
 const { protect, authorize } = require('../middleware/auth.middleware');
 const { getPlatformSettings, updatePlatformSettings, logAudit } = require('../utils/platform');
+const { settleOrder, getPlatformRevenue } = require('../utils/wallet');
 
 const router = express.Router();
 router.use(protect, authorize('admin'));
@@ -309,6 +310,11 @@ router.patch('/disputes/:id', async (req, res) => {
     } else if (action === 'release') {
       await supabaseAdmin.from('orders').update({ status: 'completed', updated_at: now }).eq('id', orderId);
       await supabaseAdmin.from('escrow_transactions').update({ status: 'released', released_at: now, updated_at: now }).eq('order_id', orderId);
+      try {
+        await settleOrder(orderId);
+      } catch (e) {
+        console.error('wallet settlement failed for order', orderId, e);
+      }
     } else {
       await supabaseAdmin.from('escrow_transactions').update({ status: 'held', updated_at: now }).eq('order_id', orderId);
     }
@@ -362,6 +368,10 @@ router.get('/finance', async (req, res) => {
     }
 
     const { data: couriers } = await supabaseAdmin.from('couriers').select('earnings_total');
+    const [commissionPeriod, commissionAllTime] = await Promise.all([
+      getPlatformRevenue(from.toISOString()),
+      getPlatformRevenue(),
+    ]);
 
     res.status(200).json({
       status: 'success',
@@ -374,6 +384,10 @@ router.get('/finance', async (req, res) => {
           released: sum(all.filter((t) => t.status === 'released'), 'amount'),
           refunded: sum(all.filter((t) => t.status === 'refunded'), 'amount'),
           courierEarnings: sum(couriers || [], 'earnings_total'),
+          // Escro's 5%-style commission, credited when orders are released
+          commission: commissionPeriod.total,
+          commissionAllTime: commissionAllTime.total,
+          walletsAvailable: commissionAllTime.available,
           transactions: inRange.length,
         },
         chart: daily,

@@ -5,6 +5,7 @@ const express = require('express');
 const { supabaseAdmin } = require('../config/supabase');
 const { protect, authorize } = require('../middleware/auth.middleware');
 const { imageUpload, handleUpload, uploadPublicImage } = require('../utils/storage');
+const { validCoord, mapsReady } = require('../utils/geo');
 
 const router = express.Router();
 const BUCKET = 'profile-images';
@@ -59,6 +60,13 @@ async function getStore(userId) {
   return data?.[0] || null;
 }
 
+/** The store's map pin (migration 008), or null. */
+async function getStorePin(storeId) {
+  if (!storeId || !(await mapsReady())) return null;
+  const { data } = await supabaseAdmin.from('stores').select('lat, lng').eq('id', storeId).maybeSingle();
+  return data && validCoord(data.lat, data.lng) ? { lat: data.lat, lng: data.lng } : null;
+}
+
 async function buildProfile(userId) {
   const [{ data: user, error: userError }, store] = await Promise.all([
     supabaseAdmin.from('users').select(USER_FIELDS).eq('id', userId).single(),
@@ -106,6 +114,9 @@ async function buildProfile(userId) {
         }
       : null,
     stats: { products: productCount },
+    // exact map pin for courier pickups (null until set; requires migration 008)
+    storeLocation: store ? await getStorePin(store.id) : null,
+    mapsAvailable: await mapsReady(),
     // false until the store settings migration has been run in Supabase
     extendedSettings: extrasAvailable !== false,
   };
@@ -165,6 +176,16 @@ router.put(
       // ---- store (created on first save if missing) ----
       const storeUpdates = {};
       if (storeName !== undefined) storeUpdates.store_name = String(storeName).trim();
+      // storeLat/storeLng: exact pickup pin ("" clears it)
+      if (req.body.storeLat !== undefined && (await mapsReady())) {
+        if (req.body.storeLat === '' || req.body.storeLat === null) {
+          Object.assign(storeUpdates, { lat: null, lng: null });
+        } else if (validCoord(req.body.storeLat, req.body.storeLng)) {
+          Object.assign(storeUpdates, { lat: Number(req.body.storeLat), lng: Number(req.body.storeLng) });
+        } else {
+          return res.status(400).json({ status: 'error', message: 'Invalid store location' });
+        }
+      }
       if (storeDescription !== undefined) storeUpdates.description = String(storeDescription).trim() || null;
       if (files.logo?.[0]) {
         storeUpdates.logo_url = await uploadPublicImage(BUCKET, `stores/${req.user.id}/logo`, files.logo[0]);

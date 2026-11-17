@@ -23,6 +23,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { courierApi } from "@/services/courier";
+import { walletApi } from "@/services/wallet";
 import { formatMoney } from "@/lib/money";
 
 // ---------------------------------------------------------------- types
@@ -47,6 +48,16 @@ type Earnings = {
   chart: ChartPoint[];
   transactions: Transaction[];
   payoutsEnabled: boolean;
+};
+
+type Wallet = {
+  available: boolean;
+  balance: number;
+  totalEarned: number;
+  totalPaidOut: number;
+  commissionRate: number;
+  payoutsEnabled: boolean;
+  transactions: Array<{ id: string; type: string; amount: number; orderId: string | null; description: string | null; createdAt: string }>;
 };
 
 // ---------------------------------------------------------------- helpers
@@ -172,10 +183,16 @@ export default function EarningsPage() {
   const [data, setData] = useState<Earnings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [wallet, setWallet] = useState<Wallet | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    // Wallet is optional: a failure here shouldn't block the earnings page
+    walletApi
+      .get()
+      .then((w: Wallet) => setWallet(w))
+      .catch(() => setWallet(null));
     try {
       const res = (await courierApi.earnings()) as Earnings;
       setData(res);
@@ -312,6 +329,35 @@ export default function EarningsPage() {
                 </div>
               </div>
             </div>
+
+            {/* Wallet strip */}
+            {wallet && !wallet.available ? (
+              <div role="alert" className="flex items-start gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-800 ring-1 ring-amber-600/20">
+                <IconAlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p className="min-w-0 flex-1">
+                  Wallets need a one-time database update — run backend/database/migrations/007_wallets.sql in the
+                  Supabase SQL editor
+                </p>
+              </div>
+            ) : wallet ? (
+              <div className="surface-card flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lime text-ink">
+                    <IconWallet className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="eyebrow font-space text-[10px] text-black/50 sm:text-[11px]">Available in wallet</p>
+                    <p className="truncate font-space text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+                      {money(wallet.balance)}
+                    </p>
+                  </div>
+                </div>
+                <p className="max-w-md text-xs text-black/55 sm:text-right sm:text-sm">
+                  &ldquo;Earned&rdquo; counts a fee once you mark a delivery delivered; it moves into your wallet when the
+                  buyer confirms receipt.
+                </p>
+              </div>
+            ) : null}
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:gap-4 lg:grid-cols-4 lg:gap-5">

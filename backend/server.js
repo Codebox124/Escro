@@ -101,6 +101,7 @@ app.use('/api/shop', require('./routes/shop.routes'));         // public marketp
 app.use('/api/customer', require('./routes/customer.routes')); // cart, checkout, buyer orders
 app.use('/api/services', require('./routes/services.routes')); // services marketplace
 app.use('/api/admin', require('./routes/admin.routes'));       // platform admin
+app.use('/api/wallet', require('./routes/wallet.routes'));     // store / courier earnings
 
 // Stripe webhook endpoint (must be before body parser)
 app.post('/api/webhooks/stripe', express.raw({type: 'application/json'}), require('./controllers/webhook.controller').handleStripeWebhook);

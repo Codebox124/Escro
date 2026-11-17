@@ -14,6 +14,7 @@ const express = require('express');
 const { supabaseAdmin } = require('../config/supabase');
 const { protect, authorize } = require('../middleware/auth.middleware');
 const { getPlatformSettings } = require('../utils/platform');
+const { roadKm, etaMinutes, validCoord, ensureDeliveryCoords, mapsReady } = require('../utils/geo');
 
 const router = express.Router();
 router.use(protect, authorize('courier', 'admin'));
@@ -97,12 +98,38 @@ function toDelivery(row, sellers = new Map(), { revealContacts = true } = {}) {
   };
 }
 
-async function selectDeliveries(build, opts) {
-  const { data, error } = await build(supabaseAdmin.from('deliveries').select(DELIVERY_SELECT));
+/** Add map pins and distances to a delivery returned by toDelivery. */
+function withMapData(delivery, row, { revealContacts = true, from = null } = {}) {
+  const pickup = validCoord(row.pickup_lat, row.pickup_lng) ? { lat: row.pickup_lat, lng: row.pickup_lng } : null;
+  let dropoff = validCoord(row.dropoff_lat, row.dropoff_lng) ? { lat: row.dropoff_lat, lng: row.dropoff_lng } : null;
+  // Before a job is accepted, only show roughly where the buyer is (~1 km).
+  if (dropoff && !revealContacts) dropoff = { lat: Math.round(dropoff.lat * 100) / 100, lng: Math.round(dropoff.lng * 100) / 100, approximate: true };
+  const toPickupKm = from && pickup ? roadKm(from, pickup) : null;
+  delivery.pickup.coords = pickup;
+  delivery.dropoff.coords = dropoff;
+  delivery.toPickupKm = toPickupKm;
+  delivery.toPickupMinutes = etaMinutes(toPickupKm);
+  return delivery;
+}
+
+const COORD_FIELDS = 'pickup_lat, pickup_lng, dropoff_lat, dropoff_lng,';
+
+async function selectDeliveries(build, opts = {}) {
+  const withCoords = await mapsReady();
+  const select = withCoords ? DELIVERY_SELECT.replace('distance_km,', `${COORD_FIELDS} distance_km,`) : DELIVERY_SELECT;
+  const { data, error } = await build(supabaseAdmin.from('deliveries').select(select));
   if (error) throw error;
-  const rows = data || [];
+  let rows = data || [];
+
+  // Lazily fill coordinates for a few rows that don't have them yet.
+  if (withCoords) {
+    const missing = rows.filter((r) => r.pickup_lat == null || r.dropoff_lat == null).slice(0, 3);
+    if (missing.length) {
+      for (const r of missing) Object.assign(r, await ensureDeliveryCoords(r.id));
+    }
+  }
   const sellers = await sellerPhones(rows);
-  return rows.map((r) => toDelivery(r, sellers, opts));
+  return rows.map((r) => withMapData(toDelivery(r, sellers, opts), r, opts));
 }
 
 function toProfile(courier, user) {
@@ -120,6 +147,9 @@ function toProfile(courier, user) {
     totalDeliveries: courier.total_deliveries || 0,
     earningsTotal: Number(courier.earnings_total || 0),
     memberSince: courier.created_at,
+    location: validCoord(courier.last_lat, courier.last_lng)
+      ? { lat: courier.last_lat, lng: courier.last_lng, updatedAt: courier.last_seen_at }
+      : null,
   };
 }
 
@@ -178,18 +208,43 @@ router.patch('/me', async (req, res) => {
   }
 });
 
+/** PATCH /api/couriers/me/location { lat, lng } — live position from the courier's phone */
+router.patch('/me/location', async (req, res) => {
+  try {
+    const { lat, lng } = req.body || {};
+    if (!validCoord(lat, lng)) return bad(res, 'A valid lat/lng is required');
+    if (!(await mapsReady())) return bad(res, 'Run backend/database/migrations/008_maps.sql in Supabase first', 409);
+    const courier = await getCourier(req.user);
+    const { error } = await supabaseAdmin
+      .from('couriers')
+      .update({ last_lat: Number(lat), last_lng: Number(lng), last_seen_at: new Date().toISOString() })
+      .eq('id', courier.id);
+    if (error) throw error;
+    res.status(200).json({ status: 'success' });
+  } catch (error) {
+    fail(res, error, 'Failed to update location');
+  }
+});
+
 // ============================================================
 // JOBS (open deliveries)
 // ============================================================
 
-/** GET /api/couriers/jobs — open delivery jobs anyone can accept */
+/** GET /api/couriers/jobs?lat=&lng= — open delivery jobs, nearest first when a position is known */
 router.get('/jobs', async (req, res) => {
   try {
+    const courier = await getCourier(req.user);
+    const from = validCoord(req.query.lat, req.query.lng)
+      ? { lat: Number(req.query.lat), lng: Number(req.query.lng) }
+      : validCoord(courier.last_lat, courier.last_lng)
+      ? { lat: courier.last_lat, lng: courier.last_lng }
+      : null;
     const jobs = await selectDeliveries(
       (q) => q.eq('status', 'pending').is('courier_id', null).order('created_at', { ascending: true }),
-      { revealContacts: false }
+      { revealContacts: false, from }
     );
-    res.status(200).json({ status: 'success', data: { jobs } });
+    if (from) jobs.sort((a, b) => (a.toPickupKm ?? 1e9) - (b.toPickupKm ?? 1e9));
+    res.status(200).json({ status: 'success', data: { jobs, from } });
   } catch (error) {
     fail(res, error, 'Failed to load jobs');
   }
@@ -241,12 +296,13 @@ router.get('/deliveries', async (req, res) => {
   try {
     const courier = await getCourier(req.user);
     const scope = req.query.scope || 'all';
+    const from = validCoord(courier.last_lat, courier.last_lng) ? { lat: courier.last_lat, lng: courier.last_lng } : null;
     const deliveries = await selectDeliveries((q) => {
       let x = q.eq('courier_id', courier.id);
       if (scope === 'active') x = x.in('status', ACTIVE);
       if (scope === 'completed') x = x.in('status', ['delivered', 'failed']);
       return x.order('updated_at', { ascending: false });
-    });
+    }, { from });
     res.status(200).json({ status: 'success', data: { deliveries } });
   } catch (error) {
     fail(res, error, 'Failed to load deliveries');

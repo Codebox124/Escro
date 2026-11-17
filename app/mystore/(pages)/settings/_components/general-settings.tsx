@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   AlertCircle,
   CheckCircle,
@@ -9,11 +10,14 @@ import {
   IconCamera,
   IconClock,
   IconCurrency,
+  IconCurrentLocation,
   IconMail,
   IconMapPin,
   IconPhone,
+  IconTrash,
   IconUpload,
   IconWorld,
+  Loader2,
 } from "@/components/icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +31,13 @@ import {
 } from "@/components/ui/select";
 import { sellerService } from "@/services/seller";
 import { useMoney } from "@/app/mystore/_components/currency";
+
+const MiniMap = dynamic(() => import("@/components/ui/mini-map"), {
+  ssr: false,
+  loading: () => <div className="h-56 w-full animate-pulse rounded-2xl bg-cream sm:h-64" />,
+});
+
+type LatLng = { lat: number; lng: number };
 
 type StoreSettings = {
   tagline: string | null;
@@ -47,6 +58,9 @@ type Profile = {
     settings?: StoreSettings;
   } | null;
   extendedSettings: boolean;
+  /** exact pickup pin for couriers (requires migration 008) */
+  storeLocation?: LatLng | null;
+  mapsAvailable?: boolean;
 };
 
 type Form = {
@@ -84,6 +98,17 @@ const toForm = (p: Profile): Form => {
   };
 };
 
+const samePin = (a: LatLng | null | undefined, b: LatLng | null | undefined) =>
+  (!a && !b) || (!!a && !!b && Math.abs(a.lat - b.lat) < 1e-7 && Math.abs(a.lng - b.lng) < 1e-7);
+
+const geoErrorMessage = (err: GeolocationPositionError | null) => {
+  if (!err) return "Your browser doesn't support location. Drag the pin or tap the map instead.";
+  if (err.code === err.PERMISSION_DENIED)
+    return "Location access was blocked. Allow it in your browser settings, or tap the map to drop the pin.";
+  if (err.code === err.TIMEOUT) return "Finding your location took too long. Please try again.";
+  return "We couldn't find your location right now. Tap the map to drop the pin instead.";
+};
+
 const errorMessage = (err: unknown, fallback: string) =>
   (typeof err === "object" && err && "message" in err && String((err as { message: unknown }).message)) ||
   fallback;
@@ -98,10 +123,16 @@ const GeneralSettings = () => {
   const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { setCurrency } = useMoney();
+  const [pin, setPin] = useState<LatLng | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [fitKey, setFitKey] = useState(0);
 
   const hydrate = (p: Profile) => {
     setProfile(p);
     setForm(toForm(p));
+    setPin(p.storeLocation || null);
+    setGeoError(null);
     setLogoFile(null);
     setLogoPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
@@ -132,10 +163,32 @@ const GeneralSettings = () => {
   }, [notice]);
 
   const original = useMemo(() => (profile ? toForm(profile) : null), [profile]);
+  const pinDirty = !!profile?.mapsAvailable && !samePin(pin, profile.storeLocation);
   const dirty =
     !!form &&
     !!original &&
-    (logoFile !== null || (Object.keys(form) as (keyof Form)[]).some((k) => form[k] !== original[k]));
+    (logoFile !== null || pinDirty || (Object.keys(form) as (keyof Form)[]).some((k) => form[k] !== original[k]));
+
+  const locate = () => {
+    setGeoError(null);
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGeoError(geoErrorMessage(null));
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false);
+        setPin({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setFitKey((k) => k + 1);
+      },
+      (err) => {
+        setLocating(false);
+        setGeoError(geoErrorMessage(err));
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+    );
+  };
 
   const set = <K extends keyof Form>(key: K, value: Form[K]) =>
     setForm((f) => (f ? { ...f, [key]: value } : f));
@@ -172,6 +225,11 @@ const GeneralSettings = () => {
       );
     }
     if (logoFile) data.append("logo", logoFile);
+    if (pinDirty) {
+      // "" clears the pin
+      data.append("storeLat", pin ? String(pin.lat) : "");
+      data.append("storeLng", pin ? String(pin.lng) : "");
+    }
 
     try {
       setSaving(true);
@@ -384,6 +442,82 @@ const GeneralSettings = () => {
           </div>
         </div>
       </fieldset>
+
+      {/* Store pickup location */}
+      <div className="surface-card p-5 sm:p-6">
+        <div className="mb-4 flex items-start gap-3">
+          <IconMapPin className="h-10 w-10 shrink-0 rounded-xl bg-cream p-2.5 text-ink" />
+          <div className="min-w-0">
+            <h3 className="text-lg font-extrabold tracking-[-0.02em] text-ink sm:text-xl">Store pickup location</h3>
+            <p className="mt-0.5 text-sm text-black/55">
+              Couriers use this pin to find your store. Drop it exactly where parcels should be collected.
+            </p>
+          </div>
+        </div>
+
+        {!profile.mapsAvailable ? (
+          <div className="flex items-start gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+            <p>
+              Run{" "}
+              <code className="rounded bg-white/70 px-1.5 py-0.5 font-space text-xs">
+                backend/database/migrations/008_maps.sql
+              </code>{" "}
+              in Supabase to enable store pins.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={locate}
+                disabled={locating || saving}
+                className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-4 text-sm font-bold text-white transition hover:bg-ink-soft disabled:opacity-60"
+              >
+                {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <IconCurrentLocation className="h-4 w-4" />}
+                Use my current location
+              </button>
+              {pin && (
+                <button
+                  type="button"
+                  onClick={() => setPin(null)}
+                  disabled={saving}
+                  className="inline-flex h-11 items-center gap-2 rounded-full border-2 border-ink/15 px-4 text-sm font-bold text-ink transition hover:border-red-500 hover:text-red-600 disabled:opacity-60"
+                >
+                  <IconTrash className="h-4 w-4" />
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {geoError && (
+              <p role="alert" className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800 ring-1 ring-amber-600/20">
+                {geoError}
+              </p>
+            )}
+
+            <MiniMap
+              markers={pin ? [{ lat: pin.lat, lng: pin.lng, kind: "pin", label: form.storeName.trim() || "Your store" }] : []}
+              onPinChange={setPin}
+              fitKey={fitKey}
+            />
+            <p className="text-xs text-black/55">
+              {pin ? (
+                <>
+                  Drag the pin or tap the map to adjust.{" "}
+                  <span className="font-space text-black/40">
+                    {pin.lat.toFixed(5)}, {pin.lng.toFixed(5)}
+                  </span>
+                </>
+              ) : (
+                "No pin yet — use your current location or tap the map to drop one."
+              )}
+              {pinDirty && <span className="ml-1 font-semibold text-ink">Unsaved — press Save Changes.</span>}
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Regional Settings */}
       <fieldset disabled={extrasLocked} className="surface-card p-5 disabled:opacity-60 sm:p-6">

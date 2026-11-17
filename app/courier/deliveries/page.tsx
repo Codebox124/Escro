@@ -12,6 +12,7 @@ import {
   setAvailability,
   syncAvailability,
   useCourier,
+  useCourierLocation,
   type Delivery,
 } from "../_components/courier-shared";
 
@@ -26,13 +27,19 @@ type Notice =
 const Page = () => {
   const router = useRouter();
   const { isAvailable, saving } = useCourier();
+  const { position } = useCourierLocation();
+  const positionRef = useRef(position);
+  useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
 
   const [jobs, setJobs] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [sort, setSort] = useState<JobSort>("newest");
+  const [sort, setSort] = useState<JobSort>("nearest");
+  const [hasFrom, setHasFrom] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const loadedOnce = useRef(false);
@@ -41,8 +48,10 @@ const Page = () => {
     if (mode === "initial") setLoading(true);
     if (mode === "manual") setRefreshing(true);
     try {
-      const data = await api.jobs();
+      const p = positionRef.current;
+      const data = await api.jobs(p ? { lat: p.lat, lng: p.lng } : null);
       setJobs(data?.jobs ?? []);
+      setHasFrom(!!data?.from);
       setError(null);
       loadedOnce.current = true;
     } catch (err) {
@@ -65,21 +74,31 @@ const Page = () => {
     return () => clearInterval(t);
   }, [load]);
 
+  // Re-sort by distance as soon as the first live fix arrives.
+  const hasPosition = !!position;
+  useEffect(() => {
+    if (hasPosition && loadedOnce.current) void load("silent");
+  }, [hasPosition, load]);
+
   useEffect(() => {
     if (notice?.kind !== "success") return;
     const t = setTimeout(() => router.push("/courier/mydeliveries"), 1500);
     return () => clearTimeout(t);
   }, [notice, router]);
 
+  const effectiveSort: JobSort = sort === "nearest" && !hasFrom ? "newest" : sort;
+
   const sorted = useMemo(() => {
     const list = [...jobs];
-    if (sort === "fee") list.sort((a, b) => b.fee - a.fee);
+    if (effectiveSort === "fee") list.sort((a, b) => b.fee - a.fee);
+    else if (effectiveSort === "nearest")
+      list.sort((a, b) => (a.toPickupKm ?? Infinity) - (b.toPickupKm ?? Infinity));
     else
       list.sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     return list;
-  }, [jobs, sort]);
+  }, [jobs, effectiveSort]);
 
   const handleAccept = async (id: string) => {
     setAcceptingId(id);
@@ -192,8 +211,9 @@ const Page = () => {
             jobs={sorted}
             loading={loading}
             refreshing={refreshing}
-            sort={sort}
+            sort={effectiveSort}
             onSortChange={setSort}
+            canSortByDistance={hasFrom}
             onRefresh={() => void load("manual")}
             onAccept={handleAccept}
             acceptingId={acceptingId}
